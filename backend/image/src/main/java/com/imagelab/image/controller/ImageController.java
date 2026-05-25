@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import jakarta.validation.Valid;
 
 import java.net.MalformedURLException;
 import java.nio.file.Path;
@@ -50,7 +51,7 @@ public class ImageController {
     @PatchMapping("/{id}")
     public ResponseEntity<ImageDto> updateImage(
             @PathVariable Long id,
-            @RequestBody UpdateImageRequest request,
+            @Valid @RequestBody UpdateImageRequest request,
             @AuthenticationPrincipal JwtPrincipal user
     ) {
         return ResponseEntity.ok(imageService.updateCategory(id, request.getCategory(), user.getId()));
