@@ -1,0 +1,134 @@
+version: '3.9'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: imagelab-postgres
+    environment:
+      POSTGRES_DB: imagelab_db
+      POSTGRES_USER: imagelab
+      POSTGRES_PASSWORD: imagelab123
+    ports:
+      - "5437:5432"
+    volumes:
+      - imagelab_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: imagelab-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: imagelab
+      RABBITMQ_DEFAULT_PASS: imagelab123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: unless-stopped
+
+  traefik:
+    image: traefik:v3.0
+    container_name: imagelab-traefik
+    ports:
+      - "80:80"
+      - "8090:8090"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./path.yaml:/etc/traefik/path.yaml:ro
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: ..
+      dockerfile: user/Dockerfile
+    container_name: imagelab-user
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/imagelab_db
+      SPRING_DATASOURCE_USERNAME: imagelab
+      SPRING_DATASOURCE_PASSWORD: imagelab123
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      JWT_EXPIRATION: 86400000
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: imagelab
+      SPRING_RABBITMQ_PASSWORD: imagelab123
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+      - rabbitmq
+    restart: unless-stopped
+
+  auth-service:
+    build:
+      context: ..
+      dockerfile: auth/Dockerfile
+    container_name: imagelab-auth
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/imagelab_db
+      SPRING_DATASOURCE_USERNAME: imagelab
+      SPRING_DATASOURCE_PASSWORD: imagelab123
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      JWT_EXPIRATION: 86400000
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: imagelab
+      SPRING_RABBITMQ_PASSWORD: imagelab123
+    ports:
+      - "8082:8082"
+    depends_on:
+      - postgres
+      - rabbitmq
+    restart: unless-stopped
+
+  image-service:
+    build:
+      context: ..
+      dockerfile: image/Dockerfile
+    container_name: imagelab-image
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/imagelab_db
+      SPRING_DATASOURCE_USERNAME: imagelab
+      SPRING_DATASOURCE_PASSWORD: imagelab123
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      JWT_EXPIRATION: 86400000
+      UPLOAD_PATH: /app/uploads
+    volumes:
+      - imagelab_uploads:/app/uploads
+    ports:
+      - "8083:8083"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama
+    container_name: imagelab-ollama
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llava && wait"]
+    restart: unless-stopped
+
+  ai-service:
+    build:
+      context: ..
+      dockerfile: ai/Dockerfile
+    container_name: imagelab-ai
+    environment:
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      JWT_EXPIRATION: 86400000
+      OLLAMA_URL: http://ollama:11434
+      IMAGE_SERVICE_URL: http://image-service:8083
+    ports:
+      - "8084:8084"
+    depends_on:
+      - image-service
+      - ollama
+    restart: unless-stopped
+
+volumes:
+  imagelab_postgres_data:
+  imagelab_uploads:
+  ollama_models:

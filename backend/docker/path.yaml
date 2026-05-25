@@ -1,0 +1,80 @@
+http:
+  middlewares:
+    strip-api-prefix:
+      stripPrefix:
+        prefixes:
+          - "/api"
+    cors:
+      headers:
+        accessControlAllowOriginList:
+          - "http://localhost:5173"
+        accessControlAllowMethods:
+          - "GET"
+          - "POST"
+          - "PUT"
+          - "PATCH"
+          - "DELETE"
+          - "OPTIONS"
+        accessControlAllowHeaders:
+          - "Authorization"
+          - "Content-Type"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 600
+
+  routers:
+    auth-router:
+      rule: "PathPrefix(`/api/auth`)"
+      entryPoints:
+        - web
+      middlewares:
+        - strip-api-prefix
+        - cors
+      service: auth-svc
+
+    images-router:
+      rule: "PathPrefix(`/api/images`)"
+      entryPoints:
+        - web
+      middlewares:
+        - strip-api-prefix
+        - cors
+      service: image-svc
+
+    users-router:
+      rule: "PathPrefix(`/api/users`)"
+      entryPoints:
+        - web
+      middlewares:
+        - strip-api-prefix
+        - cors
+      service: user-svc
+
+    ai-router:
+      rule: "PathPrefix(`/api/ai`)"
+      entryPoints:
+        - web
+      middlewares:
+        - strip-api-prefix
+        - cors
+      service: ai-svc
+
+  services:
+    auth-svc:
+      loadBalancer:
+        servers:
+          - url: "http://auth-service:8082"
+
+    image-svc:
+      loadBalancer:
+        servers:
+          - url: "http://image-service:8083"
+
+    user-svc:
+      loadBalancer:
+        servers:
+          - url: "http://user-service:8081"
+
+    ai-svc:
+      loadBalancer:
+        servers:
+          - url: "http://ai-service:8084"

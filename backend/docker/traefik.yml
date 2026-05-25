@@ -1,0 +1,16 @@
+entryPoints:
+  web:
+    address: ":80"
+  dashboard:
+    address: ":8090"
+
+providers:
+  docker:
+    exposedByDefault: false
+  file:
+    filename: /etc/traefik/path.yaml
+    watch: true
+
+api:
+  dashboard: true
+  insecure: true
