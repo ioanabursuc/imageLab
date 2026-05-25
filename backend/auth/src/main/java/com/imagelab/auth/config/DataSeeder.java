@@ -6,6 +6,7 @@ import com.imagelab.auth.repository.UserRepository;
 import com.imagelab.config.events.UserCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -18,14 +19,20 @@ public class DataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final RabbitTemplate rabbitTemplate;
 
+    @Value("${admin.email}")
+    private String adminEmail;
+
+    @Value("${admin.password}")
+    private String adminPassword;
+
     @Override
     public void run(String... args) {
-        User admin = userRepository.findByEmail("admin@imagelab.com")
+        User admin = userRepository.findByEmail(adminEmail)
                 .orElseGet(() -> {
                     User newAdmin = User.builder()
                             .name("Admin")
-                            .email("admin@imagelab.com")
-                            .password(passwordEncoder.encode("Admin123!"))
+                            .email(adminEmail)
+                            .password(passwordEncoder.encode(adminPassword))
                             .role(Role.ADMIN)
                             .build();
 
