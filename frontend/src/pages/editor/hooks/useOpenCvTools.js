@@ -33,7 +33,7 @@ export function useOpenCvTools({ imageId, imageDimensions, onSuccess, onError })
     async function applyProtectedSeamCarving(cols, rows, maskCanvas) {
         setProcessingTool(true);
 
-        const validationError = validateSeamCarvingParams(cols, rows);
+        const validationError = validateSeamCarvingParams(cols, rows,imageDimensions);
         if (validationError) {
             onError(validationError);
             setProcessingTool(false);

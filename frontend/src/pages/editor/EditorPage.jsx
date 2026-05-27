@@ -172,7 +172,7 @@ export default function EditorPage() {
                     onClearMask={clearMask}
                     onPrepareMask={() => {
                         setError("");
-                        if (originalBlobUrl) setActiveBaseUrl(originalBlobUrl);
+                        setShowBefore(false);
                         setTimeout(() => prepareMaskCanvas(), 0);
                     }}
                     aiMessage={aiMessage}

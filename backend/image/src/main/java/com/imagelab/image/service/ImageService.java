@@ -468,8 +468,9 @@ public class ImageService {
             Path maskPath =
                     masksDir.resolve(maskFileName);
 
-            Files.copy(
-                    maskFile.getInputStream(),
+            saveMaskResizedToInputImageSize(
+                    originalPath,
+                    maskFile,
                     maskPath
             );
 
@@ -691,6 +692,94 @@ public class ImageService {
         }
 
         imageRepository.delete(image);
+    }
+
+    private void validateMaskMatchesInputImage(Path inputPath, MultipartFile maskFile) {
+
+        try {
+
+            BufferedImage inputImage = ImageIO.read(inputPath.toFile());
+            BufferedImage maskImage = ImageIO.read(maskFile.getInputStream());
+
+            if (inputImage == null) {
+                throw new IllegalArgumentException("Could not read input image");
+            }
+
+            if (maskImage == null) {
+                throw new IllegalArgumentException("Could not read mask image");
+            }
+
+            if (
+                    inputImage.getWidth() != maskImage.getWidth() ||
+                            inputImage.getHeight() != maskImage.getHeight()
+            ) {
+                throw new IllegalArgumentException(
+                        "Mask dimensions must match input image dimensions. " +
+                                "Input: " + inputImage.getWidth() + "x" + inputImage.getHeight() +
+                                ", mask: " + maskImage.getWidth() + "x" + maskImage.getHeight()
+                );
+            }
+
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Could not validate mask dimensions");
+        }
+    }
+
+    private void saveMaskResizedToInputImageSize(
+            Path inputPath,
+            MultipartFile maskFile,
+            Path maskOutputPath
+    ) {
+        try {
+            BufferedImage inputImage = ImageIO.read(inputPath.toFile());
+            BufferedImage maskImage = ImageIO.read(maskFile.getInputStream());
+
+            if (inputImage == null) {
+                throw new IllegalArgumentException("Could not read input image");
+            }
+
+            if (maskImage == null) {
+                throw new IllegalArgumentException("Could not read mask image");
+            }
+
+            int targetWidth = inputImage.getWidth();
+            int targetHeight = inputImage.getHeight();
+
+            BufferedImage resizedMask =
+                    new BufferedImage(
+                            targetWidth,
+                            targetHeight,
+                            BufferedImage.TYPE_BYTE_GRAY
+                    );
+
+            java.awt.Graphics2D graphics =
+                    resizedMask.createGraphics();
+
+            graphics.setRenderingHint(
+                    java.awt.RenderingHints.KEY_INTERPOLATION,
+                    java.awt.RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR
+            );
+
+            graphics.drawImage(
+                    maskImage,
+                    0,
+                    0,
+                    targetWidth,
+                    targetHeight,
+                    null
+            );
+
+            graphics.dispose();
+
+            ImageIO.write(
+                    resizedMask,
+                    "png",
+                    maskOutputPath.toFile()
+            );
+
+        } catch (IOException e) {
+            throw new IllegalArgumentException("Could not prepare protection mask");
+        }
     }
 
     private void validateImageFile(MultipartFile file) {

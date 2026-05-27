@@ -40,8 +40,12 @@ export default function EditorSidebar({
     onAskAi,
 }) {
     function handleSelectProtectedTool() {
-        setSelectedTool(selectedTool === "seam_protect" ? null : "seam_protect");
-        onPrepareMask();
+        const nextTool = selectedTool === "seam_protect" ? null : "seam_protect";
+        setSelectedTool(nextTool);
+
+        if (nextTool === "seam_protect") {
+            onPrepareMask();
+        }
     }
 
     return (

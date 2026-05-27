@@ -114,9 +114,9 @@ public class OpenCvProcessorService {
         List<String> command = List.of(
                 processorPath,
                 "poisson",
+                sourcePath.toAbsolutePath().toString(),
                 destinationPath.toAbsolutePath().toString(),
                 outputPath.toAbsolutePath().toString(),
-                sourcePath.toAbsolutePath().toString(),
                 maskPath.toAbsolutePath().toString(),
                 String.valueOf(centerX),
                 String.valueOf(centerY),
