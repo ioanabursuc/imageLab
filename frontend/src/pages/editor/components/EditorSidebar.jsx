@@ -8,42 +8,52 @@ import CriminisiTool from "../tools/CriminisiTool";
 import PoissonTool from "../tools/PoissonTool";
 
 export default function EditorSidebar({
-    activeTab,
-    setActiveTab,
-    selectedTool,
-    setSelectedTool,
-    brightness,
-    setBrightness,
-    contrast,
-    setContrast,
-    saturation,
-    setSaturation,
-    removeCols,
-    setRemoveCols,
-    removeRows,
-    setRemoveRows,
-    brushSize,
-    setBrushSize,
-    imageDimensions,
-    processingTool,
-    activeBaseUrl,
-    hasMask,
-    onApplySeam,
-    onApplyProtected,
-    onClearMask,
-    onPrepareMask,
-    aiMessage,
-    setAiMessage,
-    aiResponse,
-    aiLoading,
-    aiError,
-    onAskAi,
-}) {
+                                          activeTab,
+                                          setActiveTab,
+                                          selectedTool,
+                                          setSelectedTool,
+                                          brightness,
+                                          setBrightness,
+                                          contrast,
+                                          setContrast,
+                                          saturation,
+                                          setSaturation,
+                                          removeCols,
+                                          setRemoveCols,
+                                          removeRows,
+                                          setRemoveRows,
+                                          brushSize,
+                                          setBrushSize,
+                                          imageDimensions,
+                                          processingTool,
+                                          activeBaseUrl,
+                                          hasMask,
+                                          onApplySeam,
+                                          onApplyProtected,
+                                          onApplyCriminisi,
+                                          onClearMask,
+                                          onPrepareMask,
+                                          aiMessage,
+                                          setAiMessage,
+                                          aiResponse,
+                                          aiLoading,
+                                          aiError,
+                                          onAskAi,
+                                      }) {
     function handleSelectProtectedTool() {
         const nextTool = selectedTool === "seam_protect" ? null : "seam_protect";
         setSelectedTool(nextTool);
 
         if (nextTool === "seam_protect") {
+            onPrepareMask();
+        }
+    }
+
+    function handleSelectCriminisiTool() {
+        const nextTool = selectedTool === "criminisi" ? null : "criminisi";
+        setSelectedTool(nextTool);
+
+        if (nextTool === "criminisi") {
             onPrepareMask();
         }
     }
@@ -162,15 +172,21 @@ export default function EditorSidebar({
                         <ToolButton
                             icon={<Trash2 size={18} />}
                             label="Criminisi"
-                            onClick={() =>
-                                setSelectedTool(
-                                    selectedTool === "criminisi" ? null : "criminisi"
-                                )
-                            }
+                            onClick={handleSelectCriminisiTool}
+                            disabled={processingTool || !activeBaseUrl}
                             active={selectedTool === "criminisi"}
                         />
 
-                        {selectedTool === "criminisi" && <CriminisiTool />}
+                        {selectedTool === "criminisi" && (
+                            <CriminisiTool
+                                brushSize={brushSize}
+                                setBrushSize={setBrushSize}
+                                processingTool={processingTool}
+                                hasMask={hasMask}
+                                onApply={onApplyCriminisi}
+                                onClear={onClearMask}
+                            />
+                        )}
                     </div>
 
                     <div className="mt-8 border-t pt-4">

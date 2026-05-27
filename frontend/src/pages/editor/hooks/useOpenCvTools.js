@@ -24,7 +24,7 @@ export function useOpenCvTools({ imageId, imageDimensions, onSuccess, onError })
             await onSuccess(updated);
         } catch (err) {
             console.error(err);
-            onError("OpenCV processing failed.");
+            onError(err?.data?.error || "OpenCV processing failed.");
         } finally {
             setProcessingTool(false);
         }
@@ -33,7 +33,7 @@ export function useOpenCvTools({ imageId, imageDimensions, onSuccess, onError })
     async function applyProtectedSeamCarving(cols, rows, maskCanvas) {
         setProcessingTool(true);
 
-        const validationError = validateSeamCarvingParams(cols, rows,imageDimensions);
+        const validationError = validateSeamCarvingParams(cols, rows, imageDimensions);
         if (validationError) {
             onError(validationError);
             setProcessingTool(false);
@@ -54,13 +54,18 @@ export function useOpenCvTools({ imageId, imageDimensions, onSuccess, onError })
 
                     const updated = await imageApi.processOpenCvWithMask(
                         imageId,
-                        { algorithm: "seam_protect", removeCols: cols, removeRows: rows },
+                        {
+                            algorithm: "seam_protect",
+                            removeCols: cols,
+                            removeRows: rows,
+                        },
                         formData
                     );
+
                     await onSuccess(updated);
                 } catch (err) {
                     console.error(err);
-                    onError("Protected seam carving failed.");
+                    onError(err?.data?.error || "Protected seam carving failed.");
                 } finally {
                     setProcessingTool(false);
                 }
@@ -72,5 +77,49 @@ export function useOpenCvTools({ imageId, imageDimensions, onSuccess, onError })
         }
     }
 
-    return { processingTool, applySeamCarving, applyProtectedSeamCarving };
+    async function applyCriminisi(maskCanvas, patchRadius = 5) {
+        setProcessingTool(true);
+
+        if (!maskCanvas) {
+            onError("Draw a mask over the area you want to remove.");
+            setProcessingTool(false);
+            return;
+        }
+
+        try {
+            maskCanvas.toBlob(async (blob) => {
+                try {
+                    const formData = new FormData();
+                    formData.append("mask", blob, "criminisi-mask.png");
+
+                    const updated = await imageApi.processOpenCvWithMask(
+                        imageId,
+                        {
+                            algorithm: "criminisi",
+                            patchRadius,
+                        },
+                        formData
+                    );
+
+                    await onSuccess(updated);
+                } catch (err) {
+                    console.error(err);
+                    onError(err?.data?.error || "Criminisi inpainting failed.");
+                } finally {
+                    setProcessingTool(false);
+                }
+            }, "image/png");
+        } catch (err) {
+            console.error(err);
+            onError("Could not export mask.");
+            setProcessingTool(false);
+        }
+    }
+
+    return {
+        processingTool,
+        applySeamCarving,
+        applyProtectedSeamCarving,
+        applyCriminisi,
+    };
 }

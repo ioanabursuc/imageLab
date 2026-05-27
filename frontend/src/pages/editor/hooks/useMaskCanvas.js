@@ -69,7 +69,7 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
     }
 
     function drawMaskPoint(event) {
-        if (selectedTool !== "seam_protect") return;
+        if (selectedTool !== "seam_protect" && selectedTool !== "criminisi") return;
 
         const position = getPointerPosition(event);
         const img = imgRef.current;

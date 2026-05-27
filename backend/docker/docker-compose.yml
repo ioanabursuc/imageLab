@@ -119,18 +119,6 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  ollama:
-    image: ollama/ollama
-    container_name: imagelab-ollama
-    volumes:
-      - ollama_models:/root/.ollama
-    ports:
-      - "11434:11434"
-    environment:
-      OLLAMA_MODEL: ${OLLAMA_MODEL}
-    entrypoint: [ "/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull $$OLLAMA_MODEL && wait" ]
-    restart: unless-stopped
-
   ai-service:
     build:
       context: ..
@@ -139,14 +127,13 @@ services:
     environment:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION}
-      OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL}
       IMAGE_SERVICE_URL: http://image-service:8083
     ports:
       - "8084:8084"
     depends_on:
       - image-service
-      - ollama
     restart: unless-stopped
 
 volumes:

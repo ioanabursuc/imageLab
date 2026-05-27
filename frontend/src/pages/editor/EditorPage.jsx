@@ -57,7 +57,12 @@ export default function EditorPage() {
         handleMaskPointerDown, handleMaskPointerMove, stopMaskDrawing,
     } = maskCanvas;
 
-    const { processingTool, applySeamCarving, applyProtectedSeamCarving } = useOpenCvTools({
+    const {
+        processingTool,
+        applySeamCarving,
+        applyProtectedSeamCarving,
+        applyCriminisi,
+    } = useOpenCvTools({
         imageId,
         imageDimensions,
         async onSuccess(updatedMeta) {
@@ -78,7 +83,8 @@ export default function EditorPage() {
 
     function handleImageLoad(event) {
         onImageLoadBase(event);
-        if (selectedTool === "seam_protect") {
+
+        if (selectedTool === "seam_protect" || selectedTool === "criminisi") {
             setTimeout(() => prepareMaskCanvas(), 0);
         }
     }
@@ -167,6 +173,12 @@ export default function EditorPage() {
                             Number(removeCols),
                             Number(removeRows),
                             maskCanvasRef.current
+                        )
+                    }
+                    onApplyCriminisi={() =>
+                        applyCriminisi(
+                            maskCanvasRef.current,
+                            5
                         )
                     }
                     onClearMask={clearMask}

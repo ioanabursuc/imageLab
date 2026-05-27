@@ -1,20 +1,20 @@
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function EditorCanvas({
-    imgRef,
-    maskCanvasRef,
-    overlayCanvasRef,
-    previewUrl,
-    imageStyle,
-    showBefore,
-    canCompare,
-    selectedTool,
-    error,
-    onImageLoad,
-    onPointerDown,
-    onPointerMove,
-    onPointerUp,
-}) {
+                                         imgRef,
+                                         maskCanvasRef,
+                                         overlayCanvasRef,
+                                         previewUrl,
+                                         imageStyle,
+                                         showBefore,
+                                         canCompare,
+                                         selectedTool,
+                                         error,
+                                         onImageLoad,
+                                         onPointerDown,
+                                         onPointerMove,
+                                         onPointerUp,
+                                     }) {
     return (
         <Card className="mx-auto max-w-3xl">
             <CardContent className="flex items-center justify-center p-6">
@@ -37,7 +37,7 @@ export default function EditorCanvas({
                                 onLoad={onImageLoad}
                             />
 
-                            {selectedTool === "seam_protect" && !showBefore && (
+                            {(selectedTool === "seam_protect" || selectedTool === "criminisi") && !showBefore && (
                                 <canvas
                                     ref={overlayCanvasRef}
                                     className="absolute left-0 top-0 z-20 h-full w-full cursor-crosshair rounded-md"
