@@ -11,9 +11,9 @@ import {
     Tooltip,
     Legend,
     ResponsiveContainer,
+    LineChart,
+    Line,
 } from "recharts";
-
-import mockImages from "@/data/mockImages";
 
 import {
     Select,
@@ -23,54 +23,130 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
-const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042"];
+const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#8dd1e1", "#a4de6c"];
 
-export default function ImageAnalyticsDashboard() {
+export default function ImageAnalyticsDashboard({ images = [] }) {
     const [selectedCategory, setSelectedCategory] = useState("all");
 
     const categories = useMemo(() => {
-        return [...new Set(mockImages.map((img) => img.category))];
-    }, []);
+        return [...new Set(images.map((img) => img.category).filter(Boolean))];
+    }, [images]);
 
     const filteredImages = useMemo(() => {
-        if (selectedCategory === "all") return mockImages;
+        if (selectedCategory === "all") return images;
+        return images.filter((img) => img.category === selectedCategory);
+    }, [images, selectedCategory]);
 
-        return mockImages.filter((img) => img.category === selectedCategory);
-    }, [selectedCategory]);
+    const totalImages = images.length;
+
+    const editedImages = useMemo(() => {
+        return images.filter((img) => img.hasProcessed).length;
+    }, [images]);
+
+    const originalImages = totalImages - editedImages;
+
+    const topCategory = useMemo(() => {
+        if (categories.length === 0) return "No category";
+
+        const result = categories
+            .map((category) => ({
+                category,
+                count: images.filter((img) => img.category === category).length,
+            }))
+            .sort((a, b) => b.count - a.count);
+
+        return result[0]?.category ?? "No category";
+    }, [images, categories]);
 
     const categoryData = useMemo(() => {
-        return categories.map((category) => ({
+        if (categories.length === 0) {
+            return [
+                {
+                    category: "No category",
+                    count: images.filter((img) => !img.category).length,
+                },
+            ];
+        }
+
+        const data = categories.map((category) => ({
             category,
-            count: mockImages.filter((img) => img.category === category).length,
+            count: images.filter((img) => img.category === category).length,
         }));
-    }, [categories]);
 
-    const pieData = useMemo(() => {
-        return categories.map((category) => ({
-            name: category,
-            value: mockImages.filter((img) => img.category === category).length,
-        }));
-    }, [categories]);
+        const withoutCategoryCount = images.filter((img) => !img.category).length;
 
-    const sizeData = useMemo(() => {
-        return filteredImages.map((img, index) => ({
-            name: img.title,
-            size: img.size ?? (index + 1) * 120,
+        if (withoutCategoryCount > 0) {
+            data.push({
+                category: "No category",
+                count: withoutCategoryCount,
+            });
+        }
+
+        return data;
+    }, [images, categories]);
+
+    const processedData = useMemo(() => {
+        return [
+            { name: "Original images", value: originalImages },
+            { name: "Edited images", value: editedImages },
+        ];
+    }, [originalImages, editedImages]);
+
+    const uploadsByDateData = useMemo(() => {
+        const grouped = {};
+
+        images.forEach((img) => {
+            const date = new Date(img.uploadDate).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+            });
+
+            grouped[date] = (grouped[date] || 0) + 1;
+        });
+
+        return Object.entries(grouped).map(([date, count]) => ({
+            date,
+            count,
         }));
-    }, [filteredImages]);
+    }, [images]);
+
+    const recentImages = useMemo(() => {
+        return [...images]
+            .sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate))
+            .slice(0, 5);
+    }, [images]);
+
+    function formatDate(dateString) {
+        return new Date(dateString).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
+    }
+
+    if (images.length === 0) {
+        return (
+            <section className="mt-10 w-full rounded-2xl border bg-white p-6 shadow-sm">
+                <h2 className="text-2xl font-bold">Image Analytics Dashboard</h2>
+                <p className="mt-2 text-sm text-gray-500">
+                    Upload images to see dynamic analytics here.
+                </p>
+            </section>
+        );
+    }
 
     return (
-        <section className="mt-10 rounded-2xl border bg-white p-6 shadow-sm">
+        <section className="mt-10 w-full rounded-2xl border bg-white p-6 shadow-sm">
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h2 className="text-2xl font-bold">Image Analytics Dashboard</h2>
                     <p className="text-sm text-gray-500">
-                        Interactive overview of image categories and image sizes.
+                        Dynamic overview generated from your uploaded images.
                     </p>
                 </div>
 
                 <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                    <SelectTrigger className="w-[180px] rounded-xl">
+                    <SelectTrigger className="w-[200px] rounded-xl">
                         <SelectValue placeholder="All images" />
                     </SelectTrigger>
 
@@ -79,17 +155,22 @@ export default function ImageAnalyticsDashboard() {
 
                         {categories.map((category) => (
                             <SelectItem key={category} value={category}>
-                                {category.charAt(0).toUpperCase() + category.slice(1)}
+                                {category}
                             </SelectItem>
                         ))}
                     </SelectContent>
                 </Select>
             </div>
 
-            <div className="mb-8 grid gap-4 sm:grid-cols-3">
+            <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-xl bg-gray-50 p-4">
                     <p className="text-sm text-gray-500">Total images</p>
-                    <p className="text-3xl font-bold">{filteredImages.length}</p>
+                    <p className="text-3xl font-bold">{totalImages}</p>
+                </div>
+
+                <div className="rounded-xl bg-gray-50 p-4">
+                    <p className="text-sm text-gray-500">Edited images</p>
+                    <p className="text-3xl font-bold">{editedImages}</p>
                 </div>
 
                 <div className="rounded-xl bg-gray-50 p-4">
@@ -98,10 +179,8 @@ export default function ImageAnalyticsDashboard() {
                 </div>
 
                 <div className="rounded-xl bg-gray-50 p-4">
-                    <p className="text-sm text-gray-500">Selected filter</p>
-                    <p className="text-3xl font-bold capitalize">
-                        {selectedCategory === "all" ? "All images" : selectedCategory}
-                    </p>
+                    <p className="text-sm text-gray-500">Top category</p>
+                    <p className="truncate text-2xl font-bold">{topCategory}</p>
                 </div>
             </div>
 
@@ -128,19 +207,19 @@ export default function ImageAnalyticsDashboard() {
                 </div>
 
                 <div className="rounded-xl border p-4">
-                    <h3 className="mb-4 font-semibold">Category Distribution</h3>
+                    <h3 className="mb-4 font-semibold">Original vs Edited Images</h3>
 
                     <div className="h-[320px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie
-                                    data={pieData}
+                                    data={processedData}
                                     dataKey="value"
                                     nameKey="name"
                                     outerRadius={100}
                                     label
                                 >
-                                    {pieData.map((entry, index) => (
+                                    {processedData.map((entry, index) => (
                                         <Cell
                                             key={entry.name}
                                             fill={COLORS[index % COLORS.length]}
@@ -156,22 +235,77 @@ export default function ImageAnalyticsDashboard() {
                 </div>
 
                 <div className="rounded-xl border p-4 lg:col-span-2">
-                    <h3 className="mb-4 font-semibold">
-                        Filtered Images Size Comparison
-                    </h3>
+                    <h3 className="mb-4 font-semibold">Uploads Over Time</h3>
 
                     <div className="h-[320px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={sizeData}>
+                            <LineChart data={uploadsByDateData}>
                                 <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="name" />
-                                <YAxis />
+                                <XAxis dataKey="date" />
+                                <YAxis allowDecimals={false} />
                                 <Tooltip />
                                 <Legend />
-                                <Bar dataKey="size" name="Image size KB" fill="#82ca9d" />
-                            </BarChart>
+                                <Line
+                                    type="monotone"
+                                    dataKey="count"
+                                    name="Uploaded images"
+                                    stroke="#8884d8"
+                                    strokeWidth={2}
+                                />
+                            </LineChart>
                         </ResponsiveContainer>
                     </div>
+                </div>
+            </div>
+
+            <div className="mt-8 rounded-xl border p-4">
+                <div className="mb-4 flex items-center justify-between">
+                    <div>
+                        <h3 className="font-semibold">Recent Images</h3>
+                        <p className="text-sm text-gray-500">
+                            Last uploaded images from your account.
+                        </p>
+                    </div>
+
+                    <p className="text-sm text-gray-500">
+                        Showing {filteredImages.length} image(s) for selected filter
+                    </p>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-left text-sm">
+                        <thead>
+                        <tr className="border-b bg-gray-50">
+                            <th className="px-4 py-3 font-medium text-gray-600">Image</th>
+                            <th className="px-4 py-3 font-medium text-gray-600">Category</th>
+                            <th className="px-4 py-3 font-medium text-gray-600">Upload date</th>
+                            <th className="px-4 py-3 font-medium text-gray-600">Status</th>
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        {recentImages.map((img) => (
+                            <tr key={img.id} className="border-b last:border-0">
+                                <td className="px-4 py-3">{img.originalFileName}</td>
+                                <td className="px-4 py-3">
+                                    {img.category || "No category"}
+                                </td>
+                                <td className="px-4 py-3">{formatDate(img.uploadDate)}</td>
+                                <td className="px-4 py-3">
+                                    {img.hasProcessed ? (
+                                        <span className="rounded-full bg-blue-50 px-2 py-1 text-xs text-blue-700">
+                                                Edited
+                                            </span>
+                                    ) : (
+                                        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                                                Original
+                                            </span>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </section>

@@ -12,6 +12,11 @@ services:
       - "5437:5432"
     volumes:
       - imagelab_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   rabbitmq:
@@ -23,6 +28,11 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
   traefik:
@@ -55,8 +65,10 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
 
   auth-service:
@@ -79,8 +91,10 @@ services:
     ports:
       - "8082:8082"
     depends_on:
-      - postgres
-      - rabbitmq
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
 
   image-service:
@@ -95,12 +109,14 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION}
       UPLOAD_PATH: /app/uploads
+      OPENCV_PROCESSOR_PATH: ${OPENCV_PROCESSOR_PATH}
     volumes:
       - imagelab_uploads:/app/uploads
     ports:
       - "8083:8083"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   ollama:
@@ -110,7 +126,9 @@ services:
       - ollama_models:/root/.ollama
     ports:
       - "11434:11434"
-    entrypoint: ["/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull llava && wait"]
+    environment:
+      OLLAMA_MODEL: ${OLLAMA_MODEL}
+    entrypoint: [ "/bin/sh", "-c", "ollama serve & sleep 5 && ollama pull $$OLLAMA_MODEL && wait" ]
     restart: unless-stopped
 
   ai-service:

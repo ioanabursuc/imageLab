@@ -74,6 +74,71 @@ public class ImageController {
         return ResponseEntity.ok(imageService.saveProcessed(id, file, user.getId()));
     }
 
+    @PostMapping("/{id}/opencv")
+    public ResponseEntity<ImageDto> processWithOpenCv(
+            @PathVariable Long id,
+            @RequestParam String algorithm,
+            @RequestParam(required = false) Integer removeCols,
+            @RequestParam(required = false) Integer removeRows,
+            @AuthenticationPrincipal JwtPrincipal user
+    ) {
+        return ResponseEntity.ok(
+                imageService.processWithOpenCv(
+                        id,
+                        algorithm,
+                        removeCols,
+                        removeRows,
+                        user.getId()
+                )
+        );
+    }
+
+    @PostMapping(value = "/{id}/opencv-mask", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImageDto> processWithOpenCvMask(
+            @PathVariable Long id,
+            @RequestParam String algorithm,
+            @RequestParam(required = false) Integer removeCols,
+            @RequestParam(required = false) Integer removeRows,
+            @RequestParam(required = false) Integer patchRadius,
+            @RequestParam("mask") MultipartFile mask,
+            @AuthenticationPrincipal JwtPrincipal user
+    ) {
+        return ResponseEntity.ok(
+                imageService.processWithOpenCvMask(
+                        id,
+                        algorithm,
+                        removeCols,
+                        removeRows,
+                        patchRadius,
+                        mask,
+                        user.getId()
+                )
+        );
+    }
+
+    @PostMapping(value = "/{id}/poisson", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ImageDto> processPoisson(
+            @PathVariable Long id,
+            @RequestParam Integer centerX,
+            @RequestParam Integer centerY,
+            @RequestParam(defaultValue = "normal") String mode,
+            @RequestParam("source") MultipartFile source,
+            @RequestParam("mask") MultipartFile mask,
+            @AuthenticationPrincipal JwtPrincipal user
+    ) {
+        return ResponseEntity.ok(
+                imageService.processPoisson(
+                        id,
+                        centerX,
+                        centerY,
+                        mode,
+                        source,
+                        mask,
+                        user.getId()
+                )
+        );
+    }
+
     @GetMapping("/{id}/processed-file")
     public ResponseEntity<UrlResource> getProcessedFile(
             @PathVariable Long id,

@@ -109,6 +109,22 @@ export const imageApi = {
     getFile: (id) => requestBlob(`/images/${id}/file`),
     saveProcessed: (id, formData) => requestMultipart(`/images/${id}/process`, formData),
     getProcessedFile: (id) => requestBlob(`/images/${id}/processed-file`),
+
+    processOpenCv: (id, params) => {
+        const query = new URLSearchParams(params).toString();
+        return request(`/images/${id}/opencv?${query}`, { method: 'POST' });
+    },
+
+    processOpenCvWithMask: (id, params, formData) => {
+        const query = new URLSearchParams(params).toString();
+        return requestMultipart(`/images/${id}/opencv-mask?${query}`, formData);
+    },
+
+    processPoisson: (id, params, formData) => {
+        const query = new URLSearchParams(params).toString();
+        return requestMultipart(`/images/${id}/poisson?${query}`, formData);
+    },
+
     updateCategory: (id, category) => request(`/images/${id}`, { method: 'PATCH', body: JSON.stringify({ category }) }),
     revertProcessed: (id) => request(`/images/${id}/processed`, { method: 'DELETE' }),
     deleteImage: (id) => request(`/images/${id}`, { method: 'DELETE' }),

@@ -280,8 +280,8 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            <div className="mt-10 mb-8 flex justify-center">
-                <ImageAnalyticsDashboard />
+            <div className="mt-10 mb-8">
+                <ImageAnalyticsDashboard images={images} />
             </div>
         </div>
     );

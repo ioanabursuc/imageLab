@@ -1,79 +1,60 @@
 # ImageLab
 
-ImageLab is a full-stack web application for image upload, editing and AI-assisted recommendations.
+ImageLab is a web application for image management and AI-assisted image analysis/editing.  
+The project is built using a microservices architecture with Spring Boot, React, PostgreSQL, RabbitMQ, Traefik and Ollama.
 
 ## Architecture
 
-The application uses a microservice-based architecture:
+The backend is split into multiple services:
 
-- Frontend: React + Vite
-- Auth Service: authentication, registration, JWT generation and admin user management
-- User Service: user profile storage synchronized through RabbitMQ
-- Image Service: image upload, storage, listing and editing
-- AI Service: AI-powered recommendations
-- PostgreSQL: persistence
-- RabbitMQ: event-driven synchronization between services
-- Traefik: reverse proxy/API routing
+- `auth-service` - handles authentication, registration, JWT generation and admin user management.
+- `user-service` - stores a synchronized read model of user profiles.
+- `image-service` - handles image upload, storage, metadata and image ownership.
+- `ai-service` - integrates with Ollama for AI-based image processing.
+- `config` - shared configuration, events and common exceptions.
+- `security` - shared JWT security logic.
 
-## Service Responsibilities
+Services communicate through HTTP and RabbitMQ events.
 
-### Auth Service
+## Main Technologies
 
-The auth service is responsible for:
+### Backend
 
-- user registration
-- login
-- password storage
-- JWT generation
-- admin CRUD operations for users
-- publishing user events to RabbitMQ
+- Java
+- Spring Boot
+- Spring Security
+- Spring Data JPA
+- PostgreSQL
+- RabbitMQ
+- Docker
+- Traefik
+- Ollama
 
-It stores data in the `users` table.
+### Frontend
 
-### User Service
+- React
+- Vite
+- Zustand
+- Tailwind CSS
 
-The user service stores public user profiles in the `user_profiles` table.
+## Service Ports
 
-It does not store passwords and does not create authentication accounts directly.
+For local development, services are exposed on the following ports:
 
-Profiles are synchronized from auth-service through RabbitMQ events:
+| Service | Port |
+|---|---:|
+| Traefik Gateway | 80 |
+| Traefik Dashboard | 8090 |
+| User Service | 8081 |
+| Auth Service | 8082 |
+| Image Service | 8083 |
+| AI Service | 8084 |
+| PostgreSQL | 5437 |
+| RabbitMQ | 5672 |
+| RabbitMQ Management UI | 15672 |
+| Ollama | 11434 |
 
-- `user.created`
-- `user.updated`
-- `user.deleted`
+Normal API access should go through Traefik:
 
-### Image Service
-
-The image service stores uploaded images in the `images` table.
-
-Images are linked to users through `user_id`, extracted from the JWT.
-
-The service does not store or load a `User` entity.
-
-### AI Service
-
-The AI service provides AI-based image recommendations and uses JWT authentication.
-
-## Authentication Flow
-
-1. User logs in or registers through auth-service.
-2. Auth-service returns a JWT containing user id, email and role.
-3. Frontend stores the token using Zustand.
-4. Protected services validate the JWT.
-5. Image ownership is based on the user id extracted from the JWT.
-
-## User Synchronization
-
-When a user is created, updated or deleted in auth-service, auth-service publishes a RabbitMQ event.
-
-User-service consumes the event and updates `user_profiles`.
-
-This avoids sharing the same `users` table across multiple services.
-
-## Running the Project
-
-Start backend services:
-
-```bash
-cd backend/docker
-docker compose up --build
+```text
+http://localhost/api/...
