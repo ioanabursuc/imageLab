@@ -7,10 +7,27 @@ import { useBeforeAfterPreview } from "./hooks/useBeforeAfterPreview";
 import { useMaskCanvas } from "./hooks/useMaskCanvas";
 import { useOpenCvTools } from "./hooks/useOpenCvTools";
 import { applyFiltersToCanvas } from "./utils/canvasUtils";
+import {
+    createMaskedPreviewUrl,
+    resizeImageFileToBlob,
+    resizeMaskCanvasToBlob,
+} from "./utils/poissonCanvasUtils";
 
 import EditorSidebar from "./components/EditorSidebar";
 import EditorTopBar from "./components/EditorTopBar";
 import EditorCanvas from "./components/EditorCanvas";
+
+const initialPoissonState = {
+    stage: "idle",
+    sourceFile: null,
+    sourceUrl: null,
+    maskedPreviewUrl: null,
+    previewSize: null,
+    centerX: null,
+    centerY: null,
+    scale: 1,
+    mode: "normal",
+};
 
 export default function EditorPage() {
     const { imageId } = useParams();
@@ -27,34 +44,52 @@ export default function EditorPage() {
     const [removeCols, setRemoveCols] = useState(50);
     const [removeRows, setRemoveRows] = useState(0);
 
+    const [poissonState, setPoissonState] = useState(initialPoissonState);
+
     const [aiMessage, setAiMessage] = useState("");
     const [aiResponse, setAiResponse] = useState("");
     const [aiLoading, setAiLoading] = useState(false);
     const [aiError, setAiError] = useState("");
 
     const imageEditor = useEditorImage(imageId);
-    const {
-        imageMeta, setImageMeta,
-        originalBlobUrl, processedBlobUrl,
-        activeBaseUrl, setActiveBaseUrl,
-        imageDimensions,
-        saving, error, setError,
-        handleImageLoad: onImageLoadBase,
-        saveProcessed, deleteProcessed, refreshProcessed,
-    } = imageEditor;
 
-    const { showBefore, setShowBefore, canCompare, previewUrl } = useBeforeAfterPreview({
+    const {
+        imageMeta,
+        setImageMeta,
         originalBlobUrl,
         processedBlobUrl,
         activeBaseUrl,
-    });
+        setActiveBaseUrl,
+        imageDimensions,
+        saving,
+        error,
+        setError,
+        handleImageLoad: onImageLoadBase,
+        saveProcessed,
+        deleteProcessed,
+        refreshProcessed,
+    } = imageEditor;
+
+    const { showBefore, setShowBefore, canCompare, previewUrl } =
+        useBeforeAfterPreview({
+            originalBlobUrl,
+            processedBlobUrl,
+            activeBaseUrl,
+        });
 
     const maskCanvas = useMaskCanvas({ imgRef, selectedTool });
+
     const {
-        maskCanvasRef, overlayCanvasRef,
-        hasMask, brushSize, setBrushSize,
-        prepareMaskCanvas, clearMask,
-        handleMaskPointerDown, handleMaskPointerMove, stopMaskDrawing,
+        maskCanvasRef,
+        overlayCanvasRef,
+        hasMask,
+        brushSize,
+        setBrushSize,
+        prepareMaskCanvas,
+        clearMask,
+        handleMaskPointerDown,
+        handleMaskPointerMove,
+        stopMaskDrawing,
     } = maskCanvas;
 
     const {
@@ -62,6 +97,7 @@ export default function EditorPage() {
         applySeamCarving,
         applyProtectedSeamCarving,
         applyCriminisi,
+        applyPoisson,
     } = useOpenCvTools({
         imageId,
         imageDimensions,
@@ -69,6 +105,7 @@ export default function EditorPage() {
             setImageMeta(updatedMeta);
             await refreshProcessed();
             clearMask();
+            resetPoissonState();
             setShowBefore(false);
             resetSliders();
         },
@@ -81,17 +118,152 @@ export default function EditorPage() {
         setSaturation(100);
     }
 
+    function revokePoissonUrls(state = poissonState) {
+        if (state.sourceUrl) {
+            URL.revokeObjectURL(state.sourceUrl);
+        }
+
+        if (state.maskedPreviewUrl) {
+            URL.revokeObjectURL(state.maskedPreviewUrl);
+        }
+    }
+
+    function resetPoissonState() {
+        revokePoissonUrls();
+        setPoissonState(initialPoissonState);
+    }
+
+    function handleStartPoisson() {
+        setError("");
+        setShowBefore(false);
+        clearMask();
+        resetPoissonState();
+    }
+
+    function handleCancelPoisson() {
+        clearMask();
+        resetPoissonState();
+    }
+
+    function handlePoissonSourceSelected(file) {
+        setError("");
+        clearMask();
+        revokePoissonUrls();
+
+        const sourceUrl = URL.createObjectURL(file);
+
+        setPoissonState({
+            ...initialPoissonState,
+            stage: "mask",
+            sourceFile: file,
+            sourceUrl,
+        });
+
+        setShowBefore(false);
+    }
+
+    async function handlePoissonContinuePlacement() {
+        if (!poissonState.sourceFile || !maskCanvasRef.current || !hasMask) {
+            setError("Upload a source image and draw a mask first.");
+            return;
+        }
+
+        try {
+            const preview = await createMaskedPreviewUrl(
+                poissonState.sourceFile,
+                maskCanvasRef.current
+            );
+
+            if (poissonState.maskedPreviewUrl) {
+                URL.revokeObjectURL(poissonState.maskedPreviewUrl);
+            }
+
+            setPoissonState((prev) => ({
+                ...prev,
+                stage: "placement",
+                maskedPreviewUrl: preview.url,
+                previewSize: {
+                    width: preview.width,
+                    height: preview.height,
+                },
+                centerX: null,
+                centerY: null,
+            }));
+
+            setShowBefore(false);
+        } catch (err) {
+            console.error(err);
+            setError("Could not create Poisson preview.");
+        }
+    }
+
+    function handlePoissonPlacementClick(point) {
+        setPoissonState((prev) => ({
+            ...prev,
+            centerX: point.x,
+            centerY: point.y,
+        }));
+    }
+
+    async function handleApplyPoisson() {
+        if (!poissonState.sourceFile || !maskCanvasRef.current) {
+            setError("Upload a source image and draw a mask first.");
+            return;
+        }
+
+        if (poissonState.centerX == null || poissonState.centerY == null) {
+            setError(
+                "Click on the destination image to choose where to insert the object."
+            );
+            return;
+        }
+
+        try {
+            const resizedSourceBlob = await resizeImageFileToBlob(
+                poissonState.sourceFile,
+                poissonState.scale
+            );
+
+            const resizedMaskBlob = await resizeMaskCanvasToBlob(
+                maskCanvasRef.current,
+                poissonState.scale
+            );
+
+            await applyPoisson(
+                resizedSourceBlob,
+                resizedMaskBlob,
+                poissonState.centerX,
+                poissonState.centerY,
+                poissonState.mode
+            );
+        } catch (err) {
+            console.error(err);
+            setError("Could not prepare Poisson source and mask.");
+        }
+    }
+
     function handleImageLoad(event) {
         onImageLoadBase(event);
 
-        if (selectedTool === "seam_protect" || selectedTool === "criminisi") {
+        if (
+            selectedTool === "seam_protect" ||
+            selectedTool === "criminisi" ||
+            (selectedTool === "poisson" && poissonState.stage === "mask")
+        ) {
             setTimeout(() => prepareMaskCanvas(), 0);
         }
     }
 
     function handleSave() {
         if (!imgRef.current) return;
-        const canvas = applyFiltersToCanvas(imgRef.current, brightness, contrast, saturation);
+
+        const canvas = applyFiltersToCanvas(
+            imgRef.current,
+            brightness,
+            contrast,
+            saturation
+        );
+
         saveProcessed(canvas, () => {
             setShowBefore(false);
             resetSliders();
@@ -100,14 +272,25 @@ export default function EditorPage() {
 
     function handleExport() {
         if (!imgRef.current) return;
-        const canvas = applyFiltersToCanvas(imgRef.current, brightness, contrast, saturation);
-        const baseName = imageMeta?.originalFileName?.replace(/\.[^.]+$/, "") || "export";
+
+        const canvas = applyFiltersToCanvas(
+            imgRef.current,
+            brightness,
+            contrast,
+            saturation
+        );
+
+        const baseName =
+            imageMeta?.originalFileName?.replace(/\.[^.]+$/, "") || "export";
+
         canvas.toBlob((blob) => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
+
             a.href = url;
             a.download = `${baseName}_edited.png`;
             a.click();
+
             URL.revokeObjectURL(url);
         }, "image/png");
     }
@@ -129,6 +312,7 @@ export default function EditorPage() {
         setAiLoading(true);
         setAiResponse("");
         setAiError("");
+
         try {
             const text = await aiApi.analyze(imageId, aiMessage);
             setAiResponse(text);
@@ -139,9 +323,18 @@ export default function EditorPage() {
         }
     }
 
-    const imageStyle = {
-        filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`,
-    };
+    const isPoissonMaskStage =
+        selectedTool === "poisson" && poissonState.stage === "mask";
+
+    const displayedPreviewUrl = isPoissonMaskStage
+        ? poissonState.sourceUrl
+        : previewUrl;
+
+    const imageStyle = isPoissonMaskStage
+        ? undefined
+        : {
+            filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`,
+        };
 
     return (
         <div className="min-h-[calc(100vh-80px)] bg-gray-50">
@@ -167,7 +360,13 @@ export default function EditorPage() {
                     processingTool={processingTool}
                     activeBaseUrl={activeBaseUrl}
                     hasMask={hasMask}
-                    onApplySeam={() => applySeamCarving("seam", Number(removeCols), Number(removeRows))}
+                    onApplySeam={() =>
+                        applySeamCarving(
+                            "seam",
+                            Number(removeCols),
+                            Number(removeRows)
+                        )
+                    }
                     onApplyProtected={() =>
                         applyProtectedSeamCarving(
                             Number(removeCols),
@@ -176,17 +375,32 @@ export default function EditorPage() {
                         )
                     }
                     onApplyCriminisi={() =>
-                        applyCriminisi(
-                            maskCanvasRef.current,
-                            5
-                        )
+                        applyCriminisi(maskCanvasRef.current, 5)
                     }
+                    onApplyPoisson={handleApplyPoisson}
                     onClearMask={clearMask}
                     onPrepareMask={() => {
                         setError("");
                         setShowBefore(false);
                         setTimeout(() => prepareMaskCanvas(), 0);
                     }}
+                    poissonState={poissonState}
+                    onStartPoisson={handleStartPoisson}
+                    onCancelPoisson={handleCancelPoisson}
+                    onPoissonSourceSelected={handlePoissonSourceSelected}
+                    onPoissonContinuePlacement={handlePoissonContinuePlacement}
+                    onPoissonScaleChange={(scale) =>
+                        setPoissonState((prev) => ({
+                            ...prev,
+                            scale,
+                        }))
+                    }
+                    onPoissonModeChange={(mode) =>
+                        setPoissonState((prev) => ({
+                            ...prev,
+                            mode,
+                        }))
+                    }
                     aiMessage={aiMessage}
                     setAiMessage={setAiMessage}
                     aiResponse={aiResponse}
@@ -213,7 +427,7 @@ export default function EditorPage() {
                         imgRef={imgRef}
                         maskCanvasRef={maskCanvasRef}
                         overlayCanvasRef={overlayCanvasRef}
-                        previewUrl={previewUrl}
+                        previewUrl={displayedPreviewUrl}
                         imageStyle={imageStyle}
                         showBefore={showBefore}
                         canCompare={canCompare}
@@ -223,6 +437,20 @@ export default function EditorPage() {
                         onPointerDown={handleMaskPointerDown}
                         onPointerMove={handleMaskPointerMove}
                         onPointerUp={stopMaskDrawing}
+                        poissonStage={poissonState.stage}
+                        poissonPreviewUrl={poissonState.maskedPreviewUrl}
+                        poissonPreviewSize={poissonState.previewSize}
+                        poissonCenter={
+                            poissonState.centerX != null &&
+                            poissonState.centerY != null
+                                ? {
+                                    x: poissonState.centerX,
+                                    y: poissonState.centerY,
+                                }
+                                : null
+                        }
+                        poissonScale={poissonState.scale}
+                        onPoissonPlacementClick={handlePoissonPlacementClick}
                     />
                 </main>
             </div>

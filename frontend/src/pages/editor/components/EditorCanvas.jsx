@@ -14,19 +14,89 @@ export default function EditorCanvas({
                                          onPointerDown,
                                          onPointerMove,
                                          onPointerUp,
+                                         poissonStage,
+                                         poissonPreviewUrl,
+                                         poissonPreviewSize,
+                                         poissonCenter,
+                                         poissonScale,
+                                         onPoissonPlacementClick,
                                      }) {
+    const canDrawMask =
+        selectedTool === "seam_protect" ||
+        selectedTool === "criminisi" ||
+        (selectedTool === "poisson" && poissonStage === "mask");
+
+    const isPoissonPlacement =
+        selectedTool === "poisson" && poissonStage === "placement";
+
+    function handleCanvasClick(event) {
+        if (!isPoissonPlacement || !onPoissonPlacementClick) return;
+
+        const img = imgRef.current;
+        if (!img) return;
+
+        const rect = img.getBoundingClientRect();
+
+        const displayX = event.clientX - rect.left;
+        const displayY = event.clientY - rect.top;
+
+        if (
+            displayX < 0 ||
+            displayY < 0 ||
+            displayX > rect.width ||
+            displayY > rect.height
+        ) {
+            return;
+        }
+
+        const realX = Math.round((displayX / rect.width) * img.naturalWidth);
+        const realY = Math.round((displayY / rect.height) * img.naturalHeight);
+
+        onPoissonPlacementClick({ x: realX, y: realY });
+    }
+
+    const poissonPreviewStyle = (() => {
+        if (!poissonPreviewSize || !poissonCenter || !imgRef.current) {
+            return null;
+        }
+
+        return {
+            left: `${(poissonCenter.x / imgRef.current.naturalWidth) * 100}%`,
+            top: `${(poissonCenter.y / imgRef.current.naturalHeight) * 100}%`,
+            width: `${
+                ((poissonPreviewSize.width * poissonScale) /
+                    imgRef.current.naturalWidth) *
+                100
+            }%`,
+            transform: "translate(-50%, -50%)",
+        };
+    })();
+
     return (
         <Card className="mx-auto max-w-3xl">
             <CardContent className="flex items-center justify-center p-6">
                 {previewUrl ? (
                     <div className="relative w-full">
-                        {canCompare && (
+                        {canCompare && selectedTool !== "poisson" && (
                             <div className="absolute left-4 top-4 z-10 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white">
                                 {showBefore ? "Before" : "After"}
                             </div>
                         )}
 
-                        <div className="relative">
+                        {isPoissonPlacement && (
+                            <div className="absolute left-4 top-4 z-30 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white">
+                                Click on the destination image to choose the insertion point
+                            </div>
+                        )}
+
+                        <div
+                            className={
+                                isPoissonPlacement
+                                    ? "relative cursor-crosshair"
+                                    : "relative"
+                            }
+                            onClick={handleCanvasClick}
+                        >
                             <img
                                 ref={imgRef}
                                 src={previewUrl}
@@ -37,7 +107,7 @@ export default function EditorCanvas({
                                 onLoad={onImageLoad}
                             />
 
-                            {(selectedTool === "seam_protect" || selectedTool === "criminisi") && !showBefore && (
+                            {canDrawMask && !showBefore && (
                                 <canvas
                                     ref={overlayCanvasRef}
                                     className="absolute left-0 top-0 z-20 h-full w-full cursor-crosshair rounded-md"
@@ -51,10 +121,21 @@ export default function EditorCanvas({
                                 />
                             )}
 
+                            {isPoissonPlacement &&
+                                poissonPreviewUrl &&
+                                poissonPreviewStyle && (
+                                    <img
+                                        src={poissonPreviewUrl}
+                                        alt="Poisson object preview"
+                                        className="pointer-events-none absolute z-20 max-w-none opacity-80 drop-shadow-xl"
+                                        style={poissonPreviewStyle}
+                                    />
+                                )}
+
                             <canvas ref={maskCanvasRef} className="hidden" />
                         </div>
 
-                        {canCompare && (
+                        {canCompare && selectedTool !== "poisson" && (
                             <p className="mt-3 text-center text-xs text-gray-500">
                                 Hold Space to preview the original image.
                             </p>

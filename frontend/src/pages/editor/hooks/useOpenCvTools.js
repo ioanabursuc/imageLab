@@ -116,10 +116,52 @@ export function useOpenCvTools({ imageId, imageDimensions, onSuccess, onError })
         }
     }
 
+    async function applyPoisson(sourceBlob, maskBlob, centerX, centerY, mode = "normal") {
+        setProcessingTool(true);
+
+        if (!sourceBlob || !maskBlob) {
+            onError("Upload a source image and draw a mask before applying Poisson editing.");
+            setProcessingTool(false);
+            return false;
+        }
+
+        if (centerX == null || centerY == null) {
+            onError("Choose the destination point where the object should be inserted.");
+            setProcessingTool(false);
+            return false;
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append("source", sourceBlob, "poisson-source.png");
+            formData.append("mask", maskBlob, "poisson-mask.png");
+
+            const updated = await imageApi.processPoisson(
+                imageId,
+                {
+                    centerX,
+                    centerY,
+                    mode,
+                },
+                formData
+            );
+
+            await onSuccess(updated);
+            return true;
+        } catch (err) {
+            console.error(err);
+            onError(err?.data?.error || "Poisson editing failed.");
+            return false;
+        } finally {
+            setProcessingTool(false);
+        }
+    }
+
     return {
         processingTool,
         applySeamCarving,
         applyProtectedSeamCarving,
         applyCriminisi,
+        applyPoisson,
     };
 }

@@ -33,6 +33,16 @@ export default function EditorSidebar({
                                           onApplyCriminisi,
                                           onClearMask,
                                           onPrepareMask,
+
+                                          poissonState,
+                                          onStartPoisson,
+                                          onCancelPoisson,
+                                          onPoissonSourceSelected,
+                                          onPoissonContinuePlacement,
+                                          onPoissonScaleChange,
+                                          onPoissonModeChange,
+                                          onApplyPoisson,
+
                                           aiMessage,
                                           setAiMessage,
                                           aiResponse,
@@ -55,6 +65,17 @@ export default function EditorSidebar({
 
         if (nextTool === "criminisi") {
             onPrepareMask();
+        }
+    }
+
+    function handleSelectPoissonTool() {
+        const nextTool = selectedTool === "poisson" ? null : "poisson";
+        setSelectedTool(nextTool);
+
+        if (nextTool === "poisson") {
+            onStartPoisson();
+        } else {
+            onCancelPoisson();
         }
     }
 
@@ -82,9 +103,23 @@ export default function EditorSidebar({
 
             {activeTab === "adjust" ? (
                 <div className="space-y-8">
-                    <SliderControl label="Brightness" value={brightness} onChange={setBrightness} />
-                    <SliderControl label="Contrast" value={contrast} onChange={setContrast} />
-                    <SliderControl label="Saturation" value={saturation} onChange={setSaturation} />
+                    <SliderControl
+                        label="Brightness"
+                        value={brightness}
+                        onChange={setBrightness}
+                    />
+
+                    <SliderControl
+                        label="Contrast"
+                        value={contrast}
+                        onChange={setContrast}
+                    />
+
+                    <SliderControl
+                        label="Saturation"
+                        value={saturation}
+                        onChange={setSaturation}
+                    />
                 </div>
             ) : (
                 <div>
@@ -159,15 +194,32 @@ export default function EditorSidebar({
                         <ToolButton
                             icon={<Shield size={18} />}
                             label="Poisson Editing"
-                            onClick={() =>
-                                setSelectedTool(
-                                    selectedTool === "poisson" ? null : "poisson"
-                                )
-                            }
+                            onClick={handleSelectPoissonTool}
+                            disabled={processingTool || !activeBaseUrl}
                             active={selectedTool === "poisson"}
                         />
 
-                        {selectedTool === "poisson" && <PoissonTool />}
+                        {selectedTool === "poisson" && (
+                            <PoissonTool
+                                stage={poissonState.stage}
+                                sourceFile={poissonState.sourceFile}
+                                brushSize={brushSize}
+                                setBrushSize={setBrushSize}
+                                hasMask={hasMask}
+                                processingTool={processingTool}
+                                centerX={poissonState.centerX}
+                                centerY={poissonState.centerY}
+                                scale={poissonState.scale}
+                                mode={poissonState.mode}
+                                onSourceSelected={onPoissonSourceSelected}
+                                onContinuePlacement={onPoissonContinuePlacement}
+                                onClearMask={onClearMask}
+                                onScaleChange={onPoissonScaleChange}
+                                onModeChange={onPoissonModeChange}
+                                onApply={onApplyPoisson}
+                                onCancel={onCancelPoisson}
+                            />
+                        )}
 
                         <ToolButton
                             icon={<Trash2 size={18} />}
@@ -198,7 +250,8 @@ export default function EditorSidebar({
                             <p className="mb-2">
                                 •{" "}
                                 <span className="font-semibold">Seam Carving:</span>{" "}
-                                removes selected rows and columns while preserving important content.
+                                removes selected rows and columns while preserving important
+                                content.
                             </p>
 
                             <p className="mb-2">
