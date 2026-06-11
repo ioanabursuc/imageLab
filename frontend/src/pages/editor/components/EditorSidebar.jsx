@@ -42,6 +42,8 @@ export default function EditorSidebar({
                                           onApplyProtected,
                                           onApplyCriminisi,
                                           onClearMask,
+                                          onCloseContour,
+                                          onFillContour,
                                           onPrepareMask,
 
                                           poissonState,
@@ -244,6 +246,8 @@ export default function EditorSidebar({
                                 hasMask={hasMask}
                                 onApply={onApplyProtected}
                                 onClear={onClearMask}
+                                onCloseContour={onCloseContour}
+                                onFillContour={onFillContour}
                             />
                         )}
 
@@ -270,6 +274,8 @@ export default function EditorSidebar({
                                 onSourceSelected={onPoissonSourceSelected}
                                 onContinuePlacement={onPoissonContinuePlacement}
                                 onClearMask={onClearMask}
+                                onCloseContour={onCloseContour}
+                                onFillContour={onFillContour}
                                 onScaleChange={onPoissonScaleChange}
                                 onModeChange={onPoissonModeChange}
                                 onApply={onApplyPoisson}
@@ -293,6 +299,8 @@ export default function EditorSidebar({
                                 hasMask={hasMask}
                                 onApply={onApplyCriminisi}
                                 onClear={onClearMask}
+                                onCloseContour={onCloseContour}
+                                onFillContour={onFillContour}
                             />
                         )}
                     </div>

@@ -15,6 +15,8 @@ export default function PoissonTool({
                                         onSourceSelected,
                                         onContinuePlacement,
                                         onClearMask,
+                                        onCloseContour,
+                                        onFillContour,
                                         onScaleChange,
                                         onModeChange,
                                         onApply,
@@ -69,10 +71,35 @@ export default function PoissonTool({
                     <div className="grid grid-cols-2 gap-2">
                         <Button
                             type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={onCloseContour}
+                            disabled={processingTool || !hasMask}
+                            className="rounded-lg"
+                        >
+                            Close contour
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={onFillContour}
+                            disabled={processingTool || !hasMask}
+                            className="rounded-lg"
+                        >
+                            Fill contour
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <Button
+                            type="button"
                             size="sm"
                             variant="outline"
                             onClick={onClearMask}
                             disabled={processingTool || !hasMask}
+                            className="rounded-lg"
                         >
                             Clear mask
                         </Button>
@@ -82,6 +109,7 @@ export default function PoissonTool({
                             size="sm"
                             onClick={onContinuePlacement}
                             disabled={processingTool || !hasMask}
+                            className="rounded-lg"
                         >
                             Choose placement
                         </Button>
@@ -114,23 +142,33 @@ export default function PoissonTool({
 
                     <div>
                         <div className="mb-2 flex items-center justify-between">
-                            <span className="text-xs font-medium text-gray-600">Object scale</span>
-                            <span className="text-xs text-gray-500">{Math.round(scale * 100)}%</span>
+                            <span className="text-xs font-medium text-gray-600">
+                                Object scale
+                            </span>
+                            <span className="text-xs text-gray-500">
+                                {Math.round(scale * 100)}%
+                            </span>
                         </div>
+
                         <input
                             type="range"
                             min="0.1"
                             max="2"
                             step="0.05"
                             value={scale}
-                            onChange={(event) => onScaleChange(Number(event.target.value))}
+                            onChange={(event) =>
+                                onScaleChange(Number(event.target.value))
+                            }
                             className="w-full"
                             disabled={processingTool}
                         />
                     </div>
 
                     <div className="rounded-md bg-gray-50 p-3 text-xs text-gray-600">
-                        Center point: {centerX != null && centerY != null ? `${centerX}, ${centerY}` : "not selected yet"}
+                        Center point:{" "}
+                        {centerX != null && centerY != null
+                            ? `${centerX}, ${centerY}`
+                            : "not selected yet"}
                     </div>
 
                     <Button

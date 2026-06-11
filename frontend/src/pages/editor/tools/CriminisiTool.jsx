@@ -8,6 +8,8 @@ export default function CriminisiTool({
                                           hasMask,
                                           onApply,
                                           onClear,
+                                          onCloseContour,
+                                          onFillContour,
                                       }) {
     return (
         <div className="rounded-xl border bg-white p-4">
@@ -21,6 +23,30 @@ export default function CriminisiTool({
             </p>
 
             <BrushSizeControl value={brushSize} onChange={setBrushSize} />
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onCloseContour}
+                    disabled={processingTool || !hasMask}
+                    className="rounded-lg"
+                >
+                    Close contour
+                </Button>
+
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={onFillContour}
+                    disabled={processingTool || !hasMask}
+                    className="rounded-lg"
+                >
+                    Fill contour
+                </Button>
+            </div>
 
             <div className="mt-4 flex gap-2">
                 <Button

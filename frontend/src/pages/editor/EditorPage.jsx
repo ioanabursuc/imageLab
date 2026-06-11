@@ -46,6 +46,7 @@ export default function EditorPage() {
     const [blur, setBlur] = useState(0);
     const [invert, setInvert] = useState(0);
 
+
     const [removeCols, setRemoveCols] = useState(50);
     const [removeRows, setRemoveRows] = useState(0);
 
@@ -95,6 +96,8 @@ export default function EditorPage() {
         handleMaskPointerDown,
         handleMaskPointerMove,
         stopMaskDrawing,
+        closeCurrentContour,
+        fillCurrentContour,
     } = maskCanvas;
 
     const {
@@ -418,6 +421,8 @@ export default function EditorPage() {
                     }
                     onApplyPoisson={handleApplyPoisson}
                     onClearMask={clearMask}
+                    onCloseContour={closeCurrentContour}
+                    onFillContour={fillCurrentContour}
                     onPrepareMask={() => {
                         setError("");
                         setShowBefore(false);
