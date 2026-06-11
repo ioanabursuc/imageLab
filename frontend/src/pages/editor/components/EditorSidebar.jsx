@@ -18,6 +18,16 @@ export default function EditorSidebar({
                                           setContrast,
                                           saturation,
                                           setSaturation,
+                                          grayscale,
+                                          setGrayscale,
+                                          sepia,
+                                          setSepia,
+                                          hueRotate,
+                                          setHueRotate,
+                                          blur,
+                                          setBlur,
+                                          invert,
+                                          setInvert,
                                           removeCols,
                                           setRemoveCols,
                                           removeRows,
@@ -119,6 +129,52 @@ export default function EditorSidebar({
                         label="Saturation"
                         value={saturation}
                         onChange={setSaturation}
+                    />
+
+                    <SliderControl
+                        label="Grayscale"
+                        value={grayscale}
+                        onChange={setGrayscale}
+                        min={0}
+                        max={100}
+                        unit="%"
+                    />
+
+                    <SliderControl
+                        label="Sepia"
+                        value={sepia}
+                        onChange={setSepia}
+                        min={0}
+                        max={100}
+                        unit="%"
+                    />
+
+                    <SliderControl
+                        label="Hue"
+                        value={hueRotate}
+                        onChange={setHueRotate}
+                        min={0}
+                        max={360}
+                        unit="°"
+                    />
+
+                    <SliderControl
+                        label="Blur"
+                        value={blur}
+                        onChange={setBlur}
+                        min={0}
+                        max={5}
+                        step={0.1}
+                        unit="px"
+                    />
+
+                    <SliderControl
+                        label="Invert"
+                        value={invert}
+                        onChange={setInvert}
+                        min={0}
+                        max={100}
+                        unit="%"
                     />
                 </div>
             ) : (

@@ -40,6 +40,11 @@ export default function EditorPage() {
     const [brightness, setBrightness] = useState(100);
     const [contrast, setContrast] = useState(100);
     const [saturation, setSaturation] = useState(100);
+    const [grayscale, setGrayscale] = useState(0);
+    const [sepia, setSepia] = useState(0);
+    const [hueRotate, setHueRotate] = useState(0);
+    const [blur, setBlur] = useState(0);
+    const [invert, setInvert] = useState(0);
 
     const [removeCols, setRemoveCols] = useState(50);
     const [removeRows, setRemoveRows] = useState(0);
@@ -116,6 +121,11 @@ export default function EditorPage() {
         setBrightness(100);
         setContrast(100);
         setSaturation(100);
+        setGrayscale(0);
+        setSepia(0);
+        setHueRotate(0);
+        setBlur(0);
+        setInvert(0);
     }
 
     function revokePoissonUrls(state = poissonState) {
@@ -261,7 +271,12 @@ export default function EditorPage() {
             imgRef.current,
             brightness,
             contrast,
-            saturation
+            saturation,
+            grayscale,
+            sepia,
+            hueRotate,
+            blur,
+            invert
         );
 
         saveProcessed(canvas, () => {
@@ -277,7 +292,12 @@ export default function EditorPage() {
             imgRef.current,
             brightness,
             contrast,
-            saturation
+            saturation,
+            grayscale,
+            sepia,
+            hueRotate,
+            blur,
+            invert
         );
 
         const baseName =
@@ -333,7 +353,16 @@ export default function EditorPage() {
     const imageStyle = isPoissonMaskStage
         ? undefined
         : {
-            filter: `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`,
+            filter: `
+            brightness(${brightness}%)
+            contrast(${contrast}%)
+            saturate(${saturation}%)
+            grayscale(${grayscale}%)
+            sepia(${sepia}%)
+            hue-rotate(${hueRotate}deg)
+            blur(${blur}px)
+            invert(${invert}%)
+        `,
         };
 
     return (
@@ -350,6 +379,16 @@ export default function EditorPage() {
                     setContrast={setContrast}
                     saturation={saturation}
                     setSaturation={setSaturation}
+                    grayscale={grayscale}
+                    setGrayscale={setGrayscale}
+                    sepia={sepia}
+                    setSepia={setSepia}
+                    hueRotate={hueRotate}
+                    setHueRotate={setHueRotate}
+                    blur={blur}
+                    setBlur={setBlur}
+                    invert={invert}
+                    setInvert={setInvert}
                     removeCols={removeCols}
                     setRemoveCols={setRemoveCols}
                     removeRows={removeRows}
