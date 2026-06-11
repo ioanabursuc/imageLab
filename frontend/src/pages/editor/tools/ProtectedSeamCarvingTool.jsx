@@ -9,6 +9,8 @@ export default function ProtectedSeamCarvingTool({
     setRemoveRows,
     brushSize,
     setBrushSize,
+    isEraserActive,
+    setIsEraserActive,
     imageDimensions,
     processingTool,
     hasMask,
@@ -43,10 +45,34 @@ export default function ProtectedSeamCarvingTool({
                 <div className="grid grid-cols-2 gap-2">
                     <Button
                         type="button"
+                        variant={!isEraserActive ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setIsEraserActive(false)}
+                        disabled={processingTool}
+                        className="rounded-lg"
+                    >
+                        Brush
+                    </Button>
+
+                    <Button
+                        type="button"
+                        variant={isEraserActive ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setIsEraserActive(true)}
+                        disabled={processingTool}
+                        className="rounded-lg"
+                    >
+                        Eraser
+                    </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                    <Button
+                        type="button"
                         variant="outline"
                         size="sm"
                         onClick={onCloseContour}
-                        disabled={processingTool || !hasMask}
+                        disabled={processingTool || !hasMask || isEraserActive}
                         className="rounded-lg"
                     >
                         Close contour
@@ -57,7 +83,7 @@ export default function ProtectedSeamCarvingTool({
                         variant="outline"
                         size="sm"
                         onClick={onFillContour}
-                        disabled={processingTool || !hasMask}
+                        disabled={processingTool || !hasMask || isEraserActive}
                         className="rounded-lg"
                     >
                         Fill contour

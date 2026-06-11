@@ -34,6 +34,8 @@ export default function EditorSidebar({
                                           setRemoveRows,
                                           brushSize,
                                           setBrushSize,
+                                          isEraserActive,
+                                          setIsEraserActive,
                                           imageDimensions,
                                           processingTool,
                                           activeBaseUrl,
@@ -241,6 +243,8 @@ export default function EditorSidebar({
                                 setRemoveRows={setRemoveRows}
                                 brushSize={brushSize}
                                 setBrushSize={setBrushSize}
+                                isEraserActive={isEraserActive}
+                                setIsEraserActive={setIsEraserActive}
                                 imageDimensions={imageDimensions}
                                 processingTool={processingTool}
                                 hasMask={hasMask}
@@ -265,6 +269,8 @@ export default function EditorSidebar({
                                 sourceFile={poissonState.sourceFile}
                                 brushSize={brushSize}
                                 setBrushSize={setBrushSize}
+                                isEraserActive={isEraserActive}
+                                setIsEraserActive={setIsEraserActive}
                                 hasMask={hasMask}
                                 processingTool={processingTool}
                                 centerX={poissonState.centerX}
@@ -295,6 +301,8 @@ export default function EditorSidebar({
                             <CriminisiTool
                                 brushSize={brushSize}
                                 setBrushSize={setBrushSize}
+                                isEraserActive={isEraserActive}
+                                setIsEraserActive={setIsEraserActive}
                                 processingTool={processingTool}
                                 hasMask={hasMask}
                                 onApply={onApplyCriminisi}

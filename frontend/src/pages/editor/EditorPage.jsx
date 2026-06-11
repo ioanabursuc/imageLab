@@ -91,6 +91,8 @@ export default function EditorPage() {
         hasMask,
         brushSize,
         setBrushSize,
+        isEraserActive,
+        setIsEraserActive,
         prepareMaskCanvas,
         clearMask,
         handleMaskPointerDown,
@@ -398,6 +400,8 @@ export default function EditorPage() {
                     setRemoveRows={setRemoveRows}
                     brushSize={brushSize}
                     setBrushSize={setBrushSize}
+                    isEraserActive={isEraserActive}
+                    setIsEraserActive={setIsEraserActive}
                     imageDimensions={imageDimensions}
                     processingTool={processingTool}
                     activeBaseUrl={activeBaseUrl}

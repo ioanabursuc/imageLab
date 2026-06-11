@@ -6,6 +6,8 @@ export default function PoissonTool({
                                         sourceFile,
                                         brushSize,
                                         setBrushSize,
+                                        isEraserActive,
+                                        setIsEraserActive,
                                         hasMask,
                                         processingTool,
                                         centerX,
@@ -71,10 +73,34 @@ export default function PoissonTool({
                     <div className="grid grid-cols-2 gap-2">
                         <Button
                             type="button"
+                            variant={!isEraserActive ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setIsEraserActive(false)}
+                            disabled={processingTool}
+                            className="rounded-lg"
+                        >
+                            Brush
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant={isEraserActive ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setIsEraserActive(true)}
+                            disabled={processingTool}
+                            className="rounded-lg"
+                        >
+                            Eraser
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <Button
+                            type="button"
                             variant="outline"
                             size="sm"
                             onClick={onCloseContour}
-                            disabled={processingTool || !hasMask}
+                            disabled={processingTool || !hasMask || isEraserActive}
                             className="rounded-lg"
                         >
                             Close contour
@@ -85,7 +111,7 @@ export default function PoissonTool({
                             variant="outline"
                             size="sm"
                             onClick={onFillContour}
-                            disabled={processingTool || !hasMask}
+                            disabled={processingTool || !hasMask || isEraserActive}
                             className="rounded-lg"
                         >
                             Fill contour

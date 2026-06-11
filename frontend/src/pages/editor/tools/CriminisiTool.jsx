@@ -4,6 +4,8 @@ import BrushSizeControl from "../components/BrushSizeControl";
 export default function CriminisiTool({
                                           brushSize,
                                           setBrushSize,
+                                          isEraserActive,
+                                          setIsEraserActive,
                                           processingTool,
                                           hasMask,
                                           onApply,
@@ -27,10 +29,34 @@ export default function CriminisiTool({
             <div className="mt-3 grid grid-cols-2 gap-2">
                 <Button
                     type="button"
+                    variant={!isEraserActive ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsEraserActive(false)}
+                    disabled={processingTool}
+                    className="rounded-lg"
+                >
+                    Brush
+                </Button>
+
+                <Button
+                    type="button"
+                    variant={isEraserActive ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setIsEraserActive(true)}
+                    disabled={processingTool}
+                    className="rounded-lg"
+                >
+                    Eraser
+                </Button>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+                <Button
+                    type="button"
                     variant="outline"
                     size="sm"
                     onClick={onCloseContour}
-                    disabled={processingTool || !hasMask}
+                    disabled={processingTool || !hasMask || isEraserActive}
                     className="rounded-lg"
                 >
                     Close contour
@@ -41,7 +67,7 @@ export default function CriminisiTool({
                     variant="outline"
                     size="sm"
                     onClick={onFillContour}
-                    disabled={processingTool || !hasMask}
+                    disabled={processingTool || !hasMask || isEraserActive}
                     className="rounded-lg"
                 >
                     Fill contour

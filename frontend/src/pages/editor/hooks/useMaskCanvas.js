@@ -9,6 +9,7 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
 
     const [hasMask, setHasMask] = useState(false);
     const [brushSize, setBrushSize] = useState(24);
+    const [isEraserActive, setIsEraserActive] = useState(false);
 
     function canDrawWithCurrentTool() {
         return (
@@ -41,6 +42,7 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
 
         contourPointsRef.current = [];
         isContourClosedRef.current = false;
+        setIsEraserActive(false);
         setHasMask(false);
     }
 
@@ -89,6 +91,15 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
         ctx.fill();
     }
 
+    function eraseOverlayCircle(ctx, x, y, radius) {
+        ctx.save();
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
     function drawMaskPoint(event) {
         if (!canDrawWithCurrentTool()) return;
 
@@ -99,11 +110,20 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
 
         if (!position || !img || !maskCanvas || !overlayCanvas) return;
 
-        const { displayX, displayY, displayWidth } = position;
+        const { displayX, displayY, displayWidth, displayHeight } = position;
 
         const realX = (displayX / displayWidth) * img.naturalWidth;
-        const realY = (displayY / position.displayHeight) * img.naturalHeight;
+        const realY = (displayY / displayHeight) * img.naturalHeight;
         const realBrush = (brushSize / displayWidth) * img.naturalWidth;
+
+        const maskCtx = maskCanvas.getContext("2d");
+        const overlayCtx = overlayCanvas.getContext("2d");
+
+        if (isEraserActive) {
+            drawCircle(maskCtx, realX, realY, realBrush / 2, "black");
+            eraseOverlayCircle(overlayCtx, displayX, displayY, brushSize / 2);
+            return;
+        }
 
         contourPointsRef.current.push({
             displayX,
@@ -114,10 +134,8 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
 
         isContourClosedRef.current = false;
 
-        const maskCtx = maskCanvas.getContext("2d");
         drawCircle(maskCtx, realX, realY, realBrush / 2, "white");
 
-        const overlayCtx = overlayCanvas.getContext("2d");
         drawCircle(
             overlayCtx,
             displayX,
@@ -132,12 +150,7 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
     function drawClosingLine(ctx, points, options = {}) {
         if (!ctx || !points || points.length < 2) return;
 
-        const {
-            xKey,
-            yKey,
-            strokeStyle,
-            lineWidth,
-        } = options;
+        const { xKey, yKey, strokeStyle, lineWidth } = options;
 
         const first = points[0];
         const last = points[points.length - 1];
@@ -160,11 +173,7 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
     function fillContour(ctx, points, options = {}) {
         if (!ctx || !points || points.length < 3) return;
 
-        const {
-            xKey,
-            yKey,
-            fillStyle,
-        } = options;
+        const { xKey, yKey, fillStyle } = options;
 
         ctx.save();
 
@@ -184,6 +193,8 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
     }
 
     function closeCurrentContour() {
+        if (isEraserActive) return;
+
         const points = contourPointsRef.current;
 
         if (!points || points.length < 2) return;
@@ -219,6 +230,8 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
     }
 
     function fillCurrentContour() {
+        if (isEraserActive) return;
+
         const points = contourPointsRef.current;
 
         if (!points || points.length < 3) return;
@@ -251,10 +264,12 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
 
         if (!canDrawWithCurrentTool()) return;
 
-        contourPointsRef.current = [];
-        isContourClosedRef.current = false;
-        drawingRef.current = true;
+        if (!isEraserActive) {
+            contourPointsRef.current = [];
+            isContourClosedRef.current = false;
+        }
 
+        drawingRef.current = true;
         drawMaskPoint(event);
     }
 
@@ -275,6 +290,8 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
         hasMask,
         brushSize,
         setBrushSize,
+        isEraserActive,
+        setIsEraserActive,
         prepareMaskCanvas,
         clearMask,
         handleMaskPointerDown,
