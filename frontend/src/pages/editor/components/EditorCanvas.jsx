@@ -1,26 +1,28 @@
 import { Card, CardContent } from "@/components/ui/card";
+import HistogramPanel from "./HistogramPanel";
 
-export default function EditorCanvas({
-                                         imgRef,
-                                         maskCanvasRef,
-                                         overlayCanvasRef,
-                                         previewUrl,
-                                         imageStyle,
-                                         showBefore,
-                                         canCompare,
-                                         selectedTool,
-                                         error,
-                                         onImageLoad,
-                                         onPointerDown,
-                                         onPointerMove,
-                                         onPointerUp,
-                                         poissonStage,
-                                         poissonPreviewUrl,
-                                         poissonPreviewSize,
-                                         poissonCenter,
-                                         poissonScale,
-                                         onPoissonPlacementClick,
-                                     }) {
+export function EditorCanvas({
+                                 imgRef,
+                                 maskCanvasRef,
+                                 overlayCanvasRef,
+                                 previewUrl,
+                                 imageStyle,
+                                 histogramFilter,
+                                 showBefore,
+                                 canCompare,
+                                 selectedTool,
+                                 error,
+                                 onImageLoad,
+                                 onPointerDown,
+                                 onPointerMove,
+                                 onPointerUp,
+                                 poissonStage,
+                                 poissonPreviewUrl,
+                                 poissonPreviewSize,
+                                 poissonCenter,
+                                 poissonScale,
+                                 onPoissonPlacementClick,
+                             }) {
     const canDrawMask =
         selectedTool === "seam_protect" ||
         selectedTool === "criminisi" ||
@@ -52,7 +54,7 @@ export default function EditorCanvas({
         const realX = Math.round((displayX / rect.width) * img.naturalWidth);
         const realY = Math.round((displayY / rect.height) * img.naturalHeight);
 
-        onPoissonPlacementClick({ x: realX, y: realY });
+        onPoissonPlacementClick({x: realX, y: realY});
     }
 
     const poissonPreviewStyle = (() => {
@@ -74,17 +76,19 @@ export default function EditorCanvas({
 
     return (
         <Card className="mx-auto max-w-3xl">
-            <CardContent className="flex items-center justify-center p-6">
+            <CardContent className="flex flex-col items-center justify-center p-6">
                 {previewUrl ? (
                     <div className="relative w-full">
                         {canCompare && selectedTool !== "poisson" && (
-                            <div className="absolute left-4 top-4 z-10 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white">
+                            <div
+                                className="absolute left-4 top-4 z-10 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white">
                                 {showBefore ? "Before" : "After"}
                             </div>
                         )}
 
                         {isPoissonPlacement && (
-                            <div className="absolute left-4 top-4 z-30 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white">
+                            <div
+                                className="absolute left-4 top-4 z-30 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white">
                                 Click on the destination image to choose the insertion point
                             </div>
                         )}
@@ -132,7 +136,7 @@ export default function EditorCanvas({
                                     />
                                 )}
 
-                            <canvas ref={maskCanvasRef} className="hidden" />
+                            <canvas ref={maskCanvasRef} className="hidden"/>
                         </div>
 
                         {canCompare && selectedTool !== "poisson" && (
@@ -140,6 +144,12 @@ export default function EditorCanvas({
                                 Hold Space to preview the original image.
                             </p>
                         )}
+
+
+                        <HistogramPanel
+                            imageUrl={previewUrl}
+                            canvasFilter={showBefore ? "none" : histogramFilter}
+                        />
                     </div>
                 ) : (
                     <div className="flex h-[520px] w-full items-center justify-center text-gray-400">

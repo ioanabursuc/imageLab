@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff8042", "#8dd1e1", "#a4de6c"];
+const UNCATEGORIZED_VALUE = "__uncategorized";
 
 export default function ImageAnalyticsDashboard({ images = [] }) {
     const [selectedCategory, setSelectedCategory] = useState("all");
@@ -32,58 +33,70 @@ export default function ImageAnalyticsDashboard({ images = [] }) {
         return [...new Set(images.map((img) => img.category).filter(Boolean))];
     }, [images]);
 
-    const filteredImages = useMemo(() => {
-        if (selectedCategory === "all") return images;
+    const hasUncategorizedImages = useMemo(() => {
+        return images.some((img) => !img.category);
+    }, [images]);
+
+    const analyticsImages = useMemo(() => {
+        if (selectedCategory === "all") {
+            return images;
+        }
+
+        if (selectedCategory === UNCATEGORIZED_VALUE) {
+            return images.filter((img) => !img.category);
+        }
+
         return images.filter((img) => img.category === selectedCategory);
     }, [images, selectedCategory]);
 
-    const totalImages = images.length;
+    const activeCategories = useMemo(() => {
+        return [...new Set(analyticsImages.map((img) => img.category).filter(Boolean))];
+    }, [analyticsImages]);
+
+    const totalImages = analyticsImages.length;
 
     const editedImages = useMemo(() => {
-        return images.filter((img) => img.hasProcessed).length;
-    }, [images]);
+        return analyticsImages.filter((img) => img.hasProcessed).length;
+    }, [analyticsImages]);
 
     const originalImages = totalImages - editedImages;
 
     const topCategory = useMemo(() => {
-        if (categories.length === 0) return "No category";
+        if (analyticsImages.length === 0) {
+            return "No category";
+        }
 
-        const result = categories
-            .map((category) => ({
-                category,
-                count: images.filter((img) => img.category === category).length,
-            }))
+        const grouped = {};
+
+        analyticsImages.forEach((img) => {
+            const category = img.category || "No category";
+            grouped[category] = (grouped[category] || 0) + 1;
+        });
+
+        const result = Object.entries(grouped)
+            .map(([category, count]) => ({ category, count }))
             .sort((a, b) => b.count - a.count);
 
         return result[0]?.category ?? "No category";
-    }, [images, categories]);
+    }, [analyticsImages]);
 
     const categoryData = useMemo(() => {
-        if (categories.length === 0) {
-            return [
-                {
-                    category: "No category",
-                    count: images.filter((img) => !img.category).length,
-                },
-            ];
+        if (analyticsImages.length === 0) {
+            return [];
         }
 
-        const data = categories.map((category) => ({
+        const grouped = {};
+
+        analyticsImages.forEach((img) => {
+            const category = img.category || "No category";
+            grouped[category] = (grouped[category] || 0) + 1;
+        });
+
+        return Object.entries(grouped).map(([category, count]) => ({
             category,
-            count: images.filter((img) => img.category === category).length,
+            count,
         }));
-
-        const withoutCategoryCount = images.filter((img) => !img.category).length;
-
-        if (withoutCategoryCount > 0) {
-            data.push({
-                category: "No category",
-                count: withoutCategoryCount,
-            });
-        }
-
-        return data;
-    }, [images, categories]);
+    }, [analyticsImages]);
 
     const processedData = useMemo(() => {
         return [
@@ -95,7 +108,7 @@ export default function ImageAnalyticsDashboard({ images = [] }) {
     const uploadsByDateData = useMemo(() => {
         const grouped = {};
 
-        images.forEach((img) => {
+        analyticsImages.forEach((img) => {
             const date = new Date(img.uploadDate).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
@@ -104,17 +117,24 @@ export default function ImageAnalyticsDashboard({ images = [] }) {
             grouped[date] = (grouped[date] || 0) + 1;
         });
 
-        return Object.entries(grouped).map(([date, count]) => ({
-            date,
-            count,
-        }));
-    }, [images]);
+        return Object.entries(grouped)
+            .map(([date, count]) => ({
+                date,
+                count,
+                timestamp: new Date(date).getTime(),
+            }))
+            .sort((a, b) => a.timestamp - b.timestamp)
+            .map(({ date, count }) => ({
+                date,
+                count,
+            }));
+    }, [analyticsImages]);
 
     const recentImages = useMemo(() => {
-        return [...images]
+        return [...analyticsImages]
             .sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate))
             .slice(0, 5);
-    }, [images]);
+    }, [analyticsImages]);
 
     function formatDate(dateString) {
         return new Date(dateString).toLocaleDateString("en-US", {
@@ -158,13 +178,19 @@ export default function ImageAnalyticsDashboard({ images = [] }) {
                                 {category}
                             </SelectItem>
                         ))}
+
+                        {hasUncategorizedImages && (
+                            <SelectItem value={UNCATEGORIZED_VALUE}>
+                                No category
+                            </SelectItem>
+                        )}
                     </SelectContent>
                 </Select>
             </div>
 
             <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-xl bg-gray-50 p-4">
-                    <p className="text-sm text-gray-500">Total images</p>
+                    <p className="text-sm text-gray-500">Images in selection</p>
                     <p className="text-3xl font-bold">{totalImages}</p>
                 </div>
 
@@ -175,7 +201,11 @@ export default function ImageAnalyticsDashboard({ images = [] }) {
 
                 <div className="rounded-xl bg-gray-50 p-4">
                     <p className="text-sm text-gray-500">Categories</p>
-                    <p className="text-3xl font-bold">{categories.length}</p>
+                    <p className="text-3xl font-bold">
+                        {selectedCategory === "all"
+                            ? categories.length
+                            : activeCategories.length || (totalImages > 0 ? 1 : 0)}
+                    </p>
                 </div>
 
                 <div className="rounded-xl bg-gray-50 p-4">
@@ -268,7 +298,7 @@ export default function ImageAnalyticsDashboard({ images = [] }) {
                     </div>
 
                     <p className="text-sm text-gray-500">
-                        Showing {filteredImages.length} image(s) for selected filter
+                        Showing {analyticsImages.length} image(s) for selected filter
                     </p>
                 </div>
 

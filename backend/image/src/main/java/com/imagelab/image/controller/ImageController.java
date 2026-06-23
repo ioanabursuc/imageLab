@@ -54,7 +54,15 @@ public class ImageController {
             @Valid @RequestBody UpdateImageRequest request,
             @AuthenticationPrincipal JwtPrincipal user
     ) {
-        return ResponseEntity.ok(imageService.updateCategory(id, request.getCategory(), user.getId()));
+        return ResponseEntity.ok(
+                imageService.updateImage(
+                        id,
+                        request.getCategory(),
+                        request.getNotes(),
+                        request.getFavorite(),
+                        user.getId()
+                )
+        );
     }
 
     @GetMapping("/{id}/file")

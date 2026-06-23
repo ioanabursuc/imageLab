@@ -1,5 +1,6 @@
-import { Expand, Shield, Trash2, Bot } from "lucide-react";
+import { Expand, Shield, Trash2, Bot, RotateCcw, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import SliderControl from "./SliderControl";
 import ToolButton from "./ToolButton";
 import SeamCarvingTool from "../tools/SeamCarvingTool";
@@ -28,6 +29,16 @@ export default function EditorSidebar({
                                           setBlur,
                                           invert,
                                           setInvert,
+
+                                          defaultFilterPresets,
+                                          userFilterPresets,
+                                          presetName,
+                                          setPresetName,
+                                          onApplyFilterPreset,
+                                          onSaveUserPreset,
+                                          onDeleteUserPreset,
+                                          onResetFilters,
+
                                           removeCols,
                                           setRemoveCols,
                                           removeRows,
@@ -180,6 +191,106 @@ export default function EditorSidebar({
                         max={100}
                         unit="%"
                     />
+
+                    <div className="space-y-4 rounded-2xl border bg-gray-50 p-4">
+                        <div>
+                            <h3 className="text-sm font-semibold text-gray-700">
+                                Filter Presets
+                            </h3>
+                            <p className="mt-1 text-xs text-gray-500">
+                                Apply a predefined look or save your own filter combination.
+                            </p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                            {(defaultFilterPresets ?? []).map((preset) => (
+                                <Button
+                                    key={preset.id}
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => onApplyFilterPreset(preset.values)}
+                                >
+                                    {preset.name}
+                                </Button>
+                            ))}
+                        </div>
+
+                        <div className="border-t pt-4">
+                            <p className="mb-2 text-xs font-medium text-gray-500">
+                                Your presets
+                            </p>
+
+                            {(userFilterPresets ?? []).length === 0 ? (
+                                <p className="rounded-lg bg-white p-3 text-xs text-gray-400">
+                                    No custom presets yet.
+                                </p>
+                            ) : (
+                                <div className="space-y-2">
+                                    {userFilterPresets.map((preset) => (
+                                        <div
+                                            key={preset.id}
+                                            className="flex items-center gap-2 rounded-lg bg-white p-2"
+                                        >
+                                            <button
+                                                type="button"
+                                                className="flex-1 truncate text-left text-sm text-gray-700 transition hover:text-blue-600"
+                                                onClick={() =>
+                                                    onApplyFilterPreset(preset.values)
+                                                }
+                                            >
+                                                {preset.name}
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                className="rounded-md p-1 text-gray-400 transition hover:bg-red-50 hover:text-red-500"
+                                                onClick={() =>
+                                                    onDeleteUserPreset(preset.id)
+                                                }
+                                                title="Delete preset"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="border-t pt-4">
+                            <div className="flex gap-2">
+                                <Input
+                                    value={presetName}
+                                    onChange={(e) =>
+                                        setPresetName(e.target.value)
+                                    }
+                                    placeholder="Preset name"
+                                    className="h-9 text-sm"
+                                    maxLength={40}
+                                />
+
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={onSaveUserPreset}
+                                    disabled={!presetName.trim()}
+                                >
+                                    <Plus size={15} />
+                                </Button>
+                            </div>
+                        </div>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full"
+                            onClick={onResetFilters}
+                        >
+                            <RotateCcw size={16} />
+                            Reset Filters
+                        </Button>
+                    </div>
                 </div>
             ) : (
                 <div>
@@ -208,7 +319,9 @@ export default function EditorSidebar({
                             icon={<Expand size={18} />}
                             label="Seam Carving"
                             onClick={() =>
-                                setSelectedTool(selectedTool === "seam" ? null : "seam")
+                                setSelectedTool(
+                                    selectedTool === "seam" ? null : "seam"
+                                )
                             }
                             disabled={processingTool || !activeBaseUrl}
                             active={selectedTool === "seam"}
@@ -321,7 +434,9 @@ export default function EditorSidebar({
 
                             <p className="mb-2">
                                 •{" "}
-                                <span className="font-semibold">Seam Carving:</span>{" "}
+                                <span className="font-semibold">
+                                    Seam Carving:
+                                </span>{" "}
                                 removes selected rows and columns while preserving important
                                 content.
                             </p>

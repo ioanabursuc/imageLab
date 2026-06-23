@@ -57,31 +57,66 @@ export function useEditorImage(imageId) {
     }
 
     async function saveProcessed(canvas, onAfterSave) {
+        if (!canvas) {
+            setError("Failed to save. The processed image could not be created.");
+            return;
+        }
+
         setSaving(true);
         setError("");
 
-        canvas.toBlob(async (blob) => {
-            try {
-                const fd = new FormData();
-                fd.append("file", blob, "processed.png");
+        canvas.toBlob(
+            async (blob) => {
+                if (!blob) {
+                    setError("Failed to save. The processed image could not be created.");
+                    setSaving(false);
+                    return;
+                }
 
-                const updated = await imageApi.saveProcessed(imageId, fd);
-                setImageMeta(updated);
+                const maxUploadSize = 10 * 1024 * 1024;
 
-                const newProcUrl = await imageApi.getProcessedFile(imageId);
-                setProcessedBlobUrl((old) => {
-                    if (old) URL.revokeObjectURL(old);
-                    return newProcUrl;
-                });
-                setActiveBaseUrl(newProcUrl);
+                if (blob.size > maxUploadSize) {
+                    setError(
+                        "Failed to save. The processed image may be too large."
+                    );
+                    setSaving(false);
+                    return;
+                }
 
-                onAfterSave?.();
-            } catch {
-                setError("Failed to save.");
-            } finally {
-                setSaving(false);
-            }
-        }, "image/png");
+                try {
+                    const fd = new FormData();
+                    fd.append("file", blob, "processed.jpg");
+
+                    const updated = await imageApi.saveProcessed(imageId, fd);
+                    setImageMeta(updated);
+
+                    const newProcUrl = await imageApi.getProcessedFile(imageId);
+
+                    setProcessedBlobUrl((old) => {
+                        if (old) URL.revokeObjectURL(old);
+                        return newProcUrl;
+                    });
+
+                    setActiveBaseUrl(newProcUrl);
+
+                    onAfterSave?.();
+                } catch (err) {
+                    console.error(err);
+
+                    if (err?.status === 413) {
+                        setError(
+                            "Failed to save. The processed image may be too large."
+                        );
+                    } else {
+                        setError("Failed to save. Please try again.");
+                    }
+                } finally {
+                    setSaving(false);
+                }
+            },
+            "image/jpeg",
+            0.9
+        );
     }
 
     async function deleteProcessed(onAfterDelete) {

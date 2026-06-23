@@ -1,6 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { aiApi } from "@/lib/api";
+import { aiApi, imageApi } from "@/lib/api";
+import { useAuthStore } from "@/store/authStore";
 
 import { useEditorImage } from "./hooks/useEditorImage";
 import { useBeforeAfterPreview } from "./hooks/useBeforeAfterPreview";
@@ -15,7 +16,7 @@ import {
 
 import EditorSidebar from "./components/EditorSidebar";
 import EditorTopBar from "./components/EditorTopBar";
-import EditorCanvas from "./components/EditorCanvas";
+import { EditorCanvas } from "./components/EditorCanvas";
 
 const initialPoissonState = {
     stage: "idle",
@@ -29,10 +30,105 @@ const initialPoissonState = {
     mode: "normal",
 };
 
+const DEFAULT_FILTER_PRESETS = [
+    {
+        id: "bright",
+        name: "Bright",
+        values: {
+            brightness: 120,
+            contrast: 105,
+            saturation: 110,
+            grayscale: 0,
+            sepia: 0,
+            hueRotate: 0,
+            blur: 0,
+            invert: 0,
+        },
+    },
+    {
+        id: "black-white",
+        name: "Black & White",
+        values: {
+            brightness: 100,
+            contrast: 115,
+            saturation: 100,
+            grayscale: 100,
+            sepia: 0,
+            hueRotate: 0,
+            blur: 0,
+            invert: 0,
+        },
+    },
+    {
+        id: "vintage",
+        name: "Vintage",
+        values: {
+            brightness: 105,
+            contrast: 95,
+            saturation: 80,
+            grayscale: 0,
+            sepia: 45,
+            hueRotate: 10,
+            blur: 0,
+            invert: 0,
+        },
+    },
+    {
+        id: "warm",
+        name: "Warm",
+        values: {
+            brightness: 100,
+            contrast: 100,
+            saturation: 100,
+            grayscale: 0,
+            sepia: 30,
+            hueRotate: 0,
+            blur: 0,
+            invert: 0,
+        },
+    },
+    {
+        id: "cold",
+        name: "Cold",
+        values: {
+            brightness: 100,
+            contrast: 100,
+            saturation: 120,
+            grayscale: 0,
+            sepia: 0,
+            hueRotate: 22,
+            blur: 0,
+            invert: 0,
+        },
+    },
+    {
+        id: "high-contrast",
+        name: "High Contrast",
+        values: {
+            brightness: 105,
+            contrast: 150,
+            saturation: 115,
+            grayscale: 0,
+            sepia: 0,
+            hueRotate: 0,
+            blur: 0,
+            invert: 0,
+        },
+    },
+];
+
+const USER_PRESETS_STORAGE_KEY_PREFIX = "imagelab-user-filter-presets";
+
 export default function EditorPage() {
     const { imageId } = useParams();
     const navigate = useNavigate();
     const imgRef = useRef(null);
+
+    const user = useAuthStore((state) => state.user);
+
+    const userPresetsStorageKey = `${USER_PRESETS_STORAGE_KEY_PREFIX}-${
+        user?.id ?? user?.email ?? "guest"
+    }`;
 
     const [activeTab, setActiveTab] = useState("adjust");
     const [selectedTool, setSelectedTool] = useState(null);
@@ -46,6 +142,9 @@ export default function EditorPage() {
     const [blur, setBlur] = useState(0);
     const [invert, setInvert] = useState(0);
 
+    const [presetName, setPresetName] = useState("");
+
+    const [userPresets, setUserPresets] = useState([]);
 
     const [removeCols, setRemoveCols] = useState(50);
     const [removeRows, setRemoveRows] = useState(0);
@@ -57,6 +156,9 @@ export default function EditorPage() {
     const [aiLoading, setAiLoading] = useState(false);
     const [aiError, setAiError] = useState("");
 
+    const [notes, setNotes] = useState("");
+    const [notesStatus, setNotesStatus] = useState("");
+
     const imageEditor = useEditorImage(imageId);
 
     const {
@@ -65,7 +167,6 @@ export default function EditorPage() {
         originalBlobUrl,
         processedBlobUrl,
         activeBaseUrl,
-        setActiveBaseUrl,
         imageDimensions,
         saving,
         error,
@@ -76,11 +177,67 @@ export default function EditorPage() {
         refreshProcessed,
     } = imageEditor;
 
+    useEffect(() => {
+        try {
+            const savedPresets = localStorage.getItem(userPresetsStorageKey);
+            setUserPresets(savedPresets ? JSON.parse(savedPresets) : []);
+        } catch {
+            setUserPresets([]);
+        }
+    }, [userPresetsStorageKey]);
+
+    useEffect(() => {
+        localStorage.setItem(
+            userPresetsStorageKey,
+            JSON.stringify(userPresets)
+        );
+    }, [userPresets, userPresetsStorageKey]);
+
+    useEffect(() => {
+        setNotes(imageMeta?.notes ?? "");
+        setNotesStatus("");
+    }, [imageMeta?.id]);
+
+    useEffect(() => {
+        if (!imageMeta?.id) return;
+
+        const currentNotes = imageMeta.notes ?? "";
+
+        if (notes === currentNotes) {
+            return;
+        }
+
+        setNotesStatus("Saving...");
+
+        const timeout = setTimeout(async () => {
+            try {
+                const updated = await imageApi.updateNotes(imageMeta.id, notes);
+                setImageMeta(updated);
+                setNotesStatus("Saved");
+            } catch {
+                setNotesStatus("Could not save notes");
+            }
+        }, 800);
+
+        return () => clearTimeout(timeout);
+    }, [notes, imageMeta?.id]);
+
+    const hasActiveFilters =
+        brightness !== 100 ||
+        contrast !== 100 ||
+        saturation !== 100 ||
+        grayscale !== 0 ||
+        sepia !== 0 ||
+        hueRotate !== 0 ||
+        blur !== 0 ||
+        invert !== 0;
+
     const { showBefore, setShowBefore, canCompare, previewUrl } =
         useBeforeAfterPreview({
             originalBlobUrl,
             processedBlobUrl,
             activeBaseUrl,
+            hasActiveFilters,
         });
 
     const maskCanvas = useMaskCanvas({ imgRef, selectedTool });
@@ -131,6 +288,59 @@ export default function EditorPage() {
         setHueRotate(0);
         setBlur(0);
         setInvert(0);
+    }
+
+    function applyFilterPreset(values) {
+        setBrightness(values.brightness);
+        setContrast(values.contrast);
+        setSaturation(values.saturation);
+        setGrayscale(values.grayscale);
+        setSepia(values.sepia);
+        setHueRotate(values.hueRotate);
+        setBlur(values.blur);
+        setInvert(values.invert);
+        setError("");
+    }
+
+    function getCurrentFilterValues() {
+        return {
+            brightness,
+            contrast,
+            saturation,
+            grayscale,
+            sepia,
+            hueRotate,
+            blur,
+            invert,
+        };
+    }
+
+    function handleSaveUserPreset() {
+        const trimmedName = presetName.trim();
+
+        if (!trimmedName) {
+            setError("Choose a name for your preset.");
+            return;
+        }
+
+        const newPreset = {
+            id:
+                typeof crypto !== "undefined" && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : `${Date.now()}-${Math.random()}`,
+            name: trimmedName,
+            values: getCurrentFilterValues(),
+        };
+
+        setUserPresets((prev) => [...prev, newPreset]);
+        setPresetName("");
+        setError("");
+    }
+
+    function handleDeleteUserPreset(id) {
+        setUserPresets((prev) =>
+            prev.filter((preset) => preset.id !== id)
+        );
     }
 
     function revokePoissonUrls(state = poissonState) {
@@ -320,12 +530,6 @@ export default function EditorPage() {
         }, "image/png");
     }
 
-    function handleRevert() {
-        setActiveBaseUrl(originalBlobUrl);
-        setShowBefore(false);
-        resetSliders();
-    }
-
     async function handleDeleteProcessed() {
         await deleteProcessed(() => {
             setShowBefore(false);
@@ -370,6 +574,10 @@ export default function EditorPage() {
         `,
         };
 
+    const histogramFilter = isPoissonMaskStage
+        ? "none"
+        : imageStyle?.filter || "none";
+
     return (
         <div className="min-h-[calc(100vh-80px)] bg-gray-50">
             <div className="grid grid-cols-[320px_1fr]">
@@ -394,6 +602,14 @@ export default function EditorPage() {
                     setBlur={setBlur}
                     invert={invert}
                     setInvert={setInvert}
+                    defaultFilterPresets={DEFAULT_FILTER_PRESETS}
+                    userFilterPresets={userPresets}
+                    presetName={presetName}
+                    setPresetName={setPresetName}
+                    onApplyFilterPreset={applyFilterPreset}
+                    onSaveUserPreset={handleSaveUserPreset}
+                    onDeleteUserPreset={handleDeleteUserPreset}
+                    onResetFilters={resetSliders}
                     removeCols={removeCols}
                     setRemoveCols={setRemoveCols}
                     removeRows={removeRows}
@@ -464,8 +680,6 @@ export default function EditorPage() {
                         saving={saving}
                         error={error}
                         onBack={() => navigate("/dashboard")}
-                        onReset={resetSliders}
-                        onRevert={handleRevert}
                         onDeleteProcessed={handleDeleteProcessed}
                         onExport={handleExport}
                         onSave={handleSave}
@@ -477,6 +691,7 @@ export default function EditorPage() {
                         overlayCanvasRef={overlayCanvasRef}
                         previewUrl={displayedPreviewUrl}
                         imageStyle={imageStyle}
+                        histogramFilter={histogramFilter}
                         showBefore={showBefore}
                         canCompare={canCompare}
                         selectedTool={selectedTool}
@@ -500,6 +715,36 @@ export default function EditorPage() {
                         poissonScale={poissonState.scale}
                         onPoissonPlacementClick={handlePoissonPlacementClick}
                     />
+
+                    <div className="mt-6 rounded-2xl border bg-white p-5 shadow-sm">
+                        <div className="mb-3 flex items-center justify-between">
+                            <div>
+                                <h2 className="text-lg font-semibold">
+                                    Image notes
+                                </h2>
+                                <p className="text-sm text-gray-500">
+                                    Write observations or details about this image.
+                                    Notes are saved automatically.
+                                </p>
+                            </div>
+
+                            <span className="text-xs text-gray-400">
+                                {notesStatus}
+                            </span>
+                        </div>
+
+                        <textarea
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            placeholder="Write notes about this image..."
+                            maxLength={2000}
+                            className="min-h-28 w-full resize-none rounded-xl border bg-white p-3 text-sm outline-none transition focus:ring-2 focus:ring-blue-200"
+                        />
+
+                        <p className="mt-2 text-right text-xs text-gray-400">
+                            {notes.length}/2000
+                        </p>
+                    </div>
                 </main>
             </div>
         </div>

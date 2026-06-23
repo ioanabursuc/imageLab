@@ -1,4 +1,4 @@
-import { RotateCcw, Download, Save, Trash2, ArrowLeft, RotateCw } from "lucide-react";
+import { Download, Save, Trash2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function EditorTopBar({
@@ -7,8 +7,6 @@ export default function EditorTopBar({
     saving,
     error,
     onBack,
-    onReset,
-    onRevert,
     onDeleteProcessed,
     onExport,
     onSave,
@@ -24,16 +22,6 @@ export default function EditorTopBar({
                 </button>
 
                 <div className="flex flex-wrap justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={onReset}>
-                        <RotateCcw size={16} /> Reset
-                    </Button>
-
-                    {processedBlobUrl && (
-                        <Button variant="outline" size="sm" onClick={onRevert}>
-                            <RotateCw size={16} /> Revert
-                        </Button>
-                    )}
-
                     {imageMeta?.hasProcessed && (
                         <Button
                             variant="outline"

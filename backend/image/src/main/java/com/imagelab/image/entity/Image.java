@@ -33,6 +33,11 @@ public class Image {
 
     private String processedFileName;
 
+    @Column(length = 2000)
+    private String notes;
+
+    private boolean favorite;
+
     @Column(name = "user_id", nullable = false)
     private Long userId;
 }

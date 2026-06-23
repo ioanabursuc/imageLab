@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Upload, Trash2, Pencil } from "lucide-react";
+import { Upload, Trash2, Pencil, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +12,18 @@ import {
     SelectItem,
 } from "@/components/ui/select";
 
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+
 import { imageApi } from "@/lib/api";
 import ImageAnalyticsDashboard from "@/components/ImageAnalyticsDashboard";
 
@@ -23,12 +34,16 @@ export default function DashboardPage() {
     const [images, setImages] = useState([]);
     const [blobUrls, setBlobUrls] = useState({});
     const [category, setCategory] = useState("all");
+    const [typeFilter, setTypeFilter] = useState("all");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [sortBy, setSortBy] = useState("newest");
     const [pendingFile, setPendingFile] = useState(null);
     const [uploadCategory, setUploadCategory] = useState("");
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState("");
     const [editingId, setEditingId] = useState(null);
     const [editingCategory, setEditingCategory] = useState("");
+    const [imageToDelete, setImageToDelete] = useState(null);
 
     const loadImages = useCallback(async () => {
         try {
@@ -70,8 +85,61 @@ export default function DashboardPage() {
 
     const categories = ["all", ...new Set(images.map((i) => i.category).filter(Boolean))];
 
-    const filteredImages =
-        category === "all" ? images : images.filter((img) => img.category === category);
+    const filteredImages = images
+        .filter((img) => {
+            if (category !== "all" && img.category !== category) {
+                return false;
+            }
+
+            if (typeFilter === "original" && img.hasProcessed) {
+                return false;
+            }
+
+            if (typeFilter === "processed" && !img.hasProcessed) {
+                return false;
+            }
+
+            if (typeFilter === "favorite" && !img.favorite) {
+                return false;
+            }
+
+            if (searchTerm.trim()) {
+                const term = searchTerm.trim().toLowerCase();
+
+                const fileName = img.originalFileName?.toLowerCase() ?? "";
+                const category = img.category?.toLowerCase() ?? "";
+                const notes = img.notes?.toLowerCase() ?? "";
+
+                if (
+                    !fileName.includes(term) &&
+                    !category.includes(term) &&
+                    !notes.includes(term)
+                ) {
+                    return false;
+                }
+            }
+
+            return true;
+        })
+        .sort((a, b) => {
+            if (sortBy === "newest") {
+                return new Date(b.uploadDate) - new Date(a.uploadDate);
+            }
+
+            if (sortBy === "oldest") {
+                return new Date(a.uploadDate) - new Date(b.uploadDate);
+            }
+
+            if (sortBy === "nameAsc") {
+                return a.originalFileName.localeCompare(b.originalFileName);
+            }
+
+            if (sortBy === "nameDesc") {
+                return b.originalFileName.localeCompare(a.originalFileName);
+            }
+
+            return 0;
+        });
 
     function handleFileChange(e) {
         const file = e.target.files?.[0];
@@ -102,15 +170,49 @@ export default function DashboardPage() {
         }
     }
 
-    async function handleDelete(e, id) {
+    function handleDeleteClick(e, img) {
         e.stopPropagation();
+        setImageToDelete(img);
+    }
+
+    async function confirmDeleteImage() {
+        if (!imageToDelete) return;
+
         try {
-            await imageApi.deleteImage(id);
-            URL.revokeObjectURL(blobUrls[id]);
-            setBlobUrls((prev) => { const next = { ...prev }; delete next[id]; return next; });
-            setImages((prev) => prev.filter((img) => img.id !== id));
+            await imageApi.deleteImage(imageToDelete.id);
+
+            URL.revokeObjectURL(blobUrls[imageToDelete.id]);
+
+            setBlobUrls((prev) => {
+                const next = { ...prev };
+                delete next[imageToDelete.id];
+                return next;
+            });
+
+            setImages((prev) =>
+                prev.filter((img) => img.id !== imageToDelete.id)
+            );
+
+            toast.success("Image deleted successfully.");
         } catch {
             setError("Failed to delete image.");
+            toast.error("Failed to delete image.");
+        } finally {
+            setImageToDelete(null);
+        }
+    }
+
+    async function handleToggleFavorite(e, img) {
+        e.stopPropagation();
+
+        try {
+            const updated = await imageApi.updateFavorite(img.id, !img.favorite);
+
+            setImages((prev) =>
+                prev.map((item) => (item.id === img.id ? updated : item))
+            );
+        } catch {
+            setError("Failed to update favorite status.");
         }
     }
 
@@ -142,17 +244,48 @@ export default function DashboardPage() {
                     </p>
                 </div>
 
-                <div className="w-48">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Input
+                        className="w-52"
+                        placeholder="Search images..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+
                     <Select value={category} onValueChange={setCategory}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Filter images" />
+                        <SelectTrigger className="w-44">
+                            <SelectValue placeholder="Category" />
                         </SelectTrigger>
                         <SelectContent>
                             {categories.map((cat) => (
                                 <SelectItem key={cat} value={cat}>
-                                    {cat === "all" ? "All images" : cat}
+                                    {cat === "all" ? "All categories" : cat}
                                 </SelectItem>
                             ))}
+                        </SelectContent>
+                    </Select>
+
+                    <Select value={typeFilter} onValueChange={setTypeFilter}>
+                        <SelectTrigger className="w-40">
+                            <SelectValue placeholder="Type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All images</SelectItem>
+                            <SelectItem value="original">Original only</SelectItem>
+                            <SelectItem value="processed">Processed only</SelectItem>
+                            <SelectItem value="favorite">Favorites</SelectItem>
+                        </SelectContent>
+                    </Select>
+
+                    <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="w-40">
+                            <SelectValue placeholder="Sort" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="newest">Newest first</SelectItem>
+                            <SelectItem value="oldest">Oldest first</SelectItem>
+                            <SelectItem value="nameAsc">Name A-Z</SelectItem>
+                            <SelectItem value="nameDesc">Name Z-A</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -234,7 +367,21 @@ export default function DashboardPage() {
                             )}
 
                             <button
-                                onClick={(e) => handleDelete(e, img.id)}
+                                onClick={(e) => handleToggleFavorite(e, img)}
+                                className="absolute top-2 right-11 bg-white rounded-full p-1.5 shadow opacity-0 group-hover:opacity-100 transition hover:bg-red-50"
+                            >
+                                <Heart
+                                    size={15}
+                                    className={
+                                        img.favorite
+                                            ? "text-red-500 fill-red-500"
+                                            : "text-gray-400"
+                                    }
+                                />
+                            </button>
+
+                            <button
+                                onClick={(e) => handleDeleteClick(e, img)}
                                 className="absolute top-2 right-2 bg-white rounded-full p-1.5 shadow opacity-0 group-hover:opacity-100 transition hover:bg-red-50"
                             >
                                 <Trash2 size={15} className="text-red-500" />
@@ -279,6 +426,36 @@ export default function DashboardPage() {
                     ))}
                 </div>
             )}
+
+            <AlertDialog
+                open={!!imageToDelete}
+                onOpenChange={(open) => {
+                    if (!open) setImageToDelete(null);
+                }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete image?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. The image{" "}
+                            <span className="font-medium text-gray-900">
+                    {imageToDelete?.originalFileName}
+                </span>{" "}
+                            will be permanently removed from your gallery.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={confirmDeleteImage}
+                            className="bg-red-600 text-white hover:bg-red-700"
+                        >
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <div className="mt-10 mb-8">
                 <ImageAnalyticsDashboard images={images} />

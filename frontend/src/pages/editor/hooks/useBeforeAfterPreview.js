@@ -1,10 +1,19 @@
 import { useState, useEffect } from "react";
 
-export function useBeforeAfterPreview({ originalBlobUrl, processedBlobUrl, activeBaseUrl }) {
+export function useBeforeAfterPreview({
+                                          originalBlobUrl,
+                                          processedBlobUrl,
+                                          activeBaseUrl,
+                                          hasActiveFilters = false,
+                                      }) {
     const [showBefore, setShowBefore] = useState(false);
 
-    const canCompare = Boolean(originalBlobUrl && processedBlobUrl);
-    const previewUrl = showBefore && originalBlobUrl ? originalBlobUrl : activeBaseUrl;
+    const canCompare = Boolean(
+        originalBlobUrl && (processedBlobUrl || hasActiveFilters)
+    );
+
+    const previewUrl =
+        showBefore && processedBlobUrl ? originalBlobUrl : activeBaseUrl;
 
     useEffect(() => {
         function handleKeyDown(event) {
@@ -25,7 +34,11 @@ export function useBeforeAfterPreview({ originalBlobUrl, processedBlobUrl, activ
 
         function handleKeyUp(event) {
             if (event.code !== "Space") return;
-            event.preventDefault();
+
+            if (canCompare) {
+                event.preventDefault();
+            }
+
             setShowBefore(false);
         }
 

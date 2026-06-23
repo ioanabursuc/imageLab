@@ -126,6 +126,8 @@ export const imageApi = {
     },
 
     updateCategory: (id, category) => request(`/images/${id}`, { method: 'PATCH', body: JSON.stringify({ category }) }),
+    updateNotes: (id, notes) => request(`/images/${id}`, {method: 'PATCH', body: JSON.stringify({ notes }),}),
+    updateFavorite: (id, favorite) => request(`/images/${id}`, {method: 'PATCH', body: JSON.stringify({ favorite }),}),
     revertProcessed: (id) => request(`/images/${id}/processed`, { method: 'DELETE' }),
     deleteImage: (id) => request(`/images/${id}`, { method: 'DELETE' }),
 };

@@ -109,9 +109,11 @@ public class ImageService {
         return ImageDto.from(image);
     }
 
-    public ImageDto updateCategory(
+    public ImageDto updateImage(
             Long id,
             String category,
+            String notes,
+            Boolean favorite,
             Long userId
     ) {
 
@@ -123,11 +125,21 @@ public class ImageService {
                         )
                 );
 
-        image.setCategory(
-                category != null && !category.isBlank()
-                        ? category.trim()
-                        : null
-        );
+        if (category != null) {
+            image.setCategory(
+                    !category.isBlank()
+                            ? category.trim()
+                            : null
+            );
+        }
+
+        if (notes != null) {
+            image.setNotes(notes.trim());
+        }
+
+        if (favorite != null) {
+            image.setFavorite(favorite);
+        }
 
         return ImageDto.from(
                 imageRepository.save(image)
