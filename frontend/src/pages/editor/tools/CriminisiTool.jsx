@@ -20,8 +20,8 @@ export default function CriminisiTool({
             </p>
 
             <p className="mb-3 text-xs text-gray-500 leading-relaxed">
-                Draw over the object or area you want to remove. The selected region
-                will be reconstructed using surrounding texture.
+                Draw over a small object or area you want to remove. Criminisi works best
+                on limited regions with similar surrounding texture.
             </p>
 
             <BrushSizeControl value={brushSize} onChange={setBrushSize} />
@@ -97,7 +97,8 @@ export default function CriminisiTool({
             </div>
 
             <p className="mt-3 text-xs text-gray-500">
-                Blue overlay marks the area that will be removed.
+                Blue overlay marks the area that will be removed. For large objects, use
+                several smaller selections instead of one big mask.
             </p>
         </div>
     );

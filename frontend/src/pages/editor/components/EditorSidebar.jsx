@@ -104,6 +104,62 @@ export default function EditorSidebar({
         }
     }
 
+    function getToolInstructions() {
+        if (selectedTool === "seam") {
+            return {
+                title: "Seam Carving",
+                items: [
+                    "Reduce image width or height by removing less important seams.",
+                    "Use small values for columns and rows to avoid visible distortions.",
+                    "You can apply the tool multiple times if you want a stronger effect.",
+                ],
+            };
+        }
+
+        if (selectedTool === "seam_protect") {
+            return {
+                title: "Protection Mask",
+                items: [
+                    "Draw over the area that should be protected during resizing.",
+                    "Use Brush to mark important content and Eraser to correct the mask.",
+                    "Close contour and Fill contour can help create a complete protected area.",
+                ],
+            };
+        }
+
+        if (selectedTool === "poisson") {
+            return {
+                title: "Poisson Editing",
+                items: [
+                    "Choose a source image, select the object with a mask, then place it on the current image.",
+                    "Use the scale slider to adjust the inserted object before applying.",
+                    "Mixed clone usually blends better when the source and background have different textures.",
+                ],
+            };
+        }
+
+        if (selectedTool === "criminisi") {
+            return {
+                title: "Criminisi Inpainting",
+                items: [
+                    "Draw over a small object or area that you want to remove.",
+                    "This method works best on small regions with similar surrounding texture.",
+                    "For larger objects, split the removal into several smaller steps.",
+                ],
+            };
+        }
+
+        return {
+            title: "Tool Instructions",
+            items: [
+                "Select a tool above to see specific instructions.",
+                "Masks are used by Protection Mask, Poisson Editing and Criminisi.",
+            ],
+        };
+    }
+
+    const toolInstructions = getToolInstructions();
+
     return (
         <aside className="min-h-[calc(100vh-80px)] border-r bg-white p-6">
             <div className="mb-8 flex rounded-2xl bg-gray-100 p-1">
@@ -427,30 +483,28 @@ export default function EditorSidebar({
                     </div>
 
                     <div className="mt-8 border-t pt-4">
-                        <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-500">
-                            <p className="mb-3 font-medium text-gray-700">
-                                Tool Instructions:
+                        <div className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">
+                            <p className="mb-3 font-semibold text-gray-700">
+                                {toolInstructions.title}
                             </p>
 
-                            <p className="mb-2">
-                                •{" "}
-                                <span className="font-semibold">
-                                    Seam Carving:
-                                </span>{" "}
-                                removes selected rows and columns while preserving important
-                                content.
-                            </p>
+                            <ul className="space-y-2">
+                                {toolInstructions.items.map((item) => (
+                                    <li
+                                        key={item}
+                                        className="flex gap-2 leading-relaxed"
+                                    >
+                                        <span className="mt-[2px] text-blue-500">
+                                            •
+                                        </span>
+                                        <span>{item}</span>
+                                    </li>
+                                ))}
+                            </ul>
 
-                            <p className="mb-2">
-                                •{" "}
-                                <span className="font-semibold">Space key:</span>{" "}
-                                hold Space to preview the original image.
-                            </p>
-
-                            <p>
-                                •{" "}
-                                <span className="font-semibold">Masks:</span>{" "}
-                                required later for protection, Poisson Editing and Criminisi.
+                            <p className="mt-4 rounded-xl bg-white p-3 text-xs leading-relaxed text-gray-500">
+                                Hold <span className="font-semibold">Space</span>{" "}
+                                to preview the original image.
                             </p>
                         </div>
                     </div>

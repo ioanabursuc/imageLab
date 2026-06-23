@@ -315,15 +315,18 @@ public class ImageService {
         String normalizedAlgorithm =
                 algorithm.trim().toLowerCase();
 
+        String oldProcessedFileName =
+                image.getProcessedFileName();
+
         Path originalPath;
 
-        if (image.getProcessedFileName() != null) {
+        if (oldProcessedFileName != null) {
 
             originalPath = Paths.get(
                     uploadPath,
                     String.valueOf(userId),
                     "processed",
-                    image.getProcessedFileName()
+                    oldProcessedFileName
             );
 
         } else {
@@ -345,15 +348,6 @@ public class ImageService {
         try {
 
             Files.createDirectories(processedDir);
-
-            if (image.getProcessedFileName() != null) {
-
-                Files.deleteIfExists(
-                        processedDir.resolve(
-                                image.getProcessedFileName()
-                        )
-                );
-            }
 
             String processedFileName =
                     UUID.randomUUID() + ".png";
@@ -384,9 +378,16 @@ public class ImageService {
 
             image.setProcessedFileName(processedFileName);
 
-            return ImageDto.from(
+            ImageDto dto = ImageDto.from(
                     imageRepository.save(image)
             );
+
+            deleteOldProcessedFile(
+                    processedDir,
+                    oldProcessedFileName
+            );
+
+            return dto;
 
         } catch (IOException e) {
 
@@ -427,15 +428,18 @@ public class ImageService {
         String normalizedAlgorithm =
                 algorithm.trim().toLowerCase();
 
+        String oldProcessedFileName =
+                image.getProcessedFileName();
+
         Path originalPath;
 
-        if (image.getProcessedFileName() != null) {
+        if (oldProcessedFileName != null) {
 
             originalPath = Paths.get(
                     uploadPath,
                     String.valueOf(userId),
                     "processed",
-                    image.getProcessedFileName()
+                    oldProcessedFileName
             );
 
         } else {
@@ -464,15 +468,6 @@ public class ImageService {
 
             Files.createDirectories(processedDir);
             Files.createDirectories(masksDir);
-
-            if (image.getProcessedFileName() != null) {
-
-                Files.deleteIfExists(
-                        processedDir.resolve(
-                                image.getProcessedFileName()
-                        )
-                );
-            }
 
             String maskFileName =
                     UUID.randomUUID() + ".png";
@@ -528,9 +523,16 @@ public class ImageService {
 
             image.setProcessedFileName(processedFileName);
 
-            return ImageDto.from(
+            ImageDto dto = ImageDto.from(
                     imageRepository.save(image)
             );
+
+            deleteOldProcessedFile(
+                    processedDir,
+                    oldProcessedFileName
+            );
+
+            return dto;
 
         } catch (IOException e) {
 
@@ -562,15 +564,18 @@ public class ImageService {
                         )
                 );
 
+        String oldProcessedFileName =
+                image.getProcessedFileName();
+
         Path inputPath;
 
-        if (image.getProcessedFileName() != null) {
+        if (oldProcessedFileName != null) {
 
             inputPath = Paths.get(
                     uploadPath,
                     String.valueOf(userId),
                     "processed",
-                    image.getProcessedFileName()
+                    oldProcessedFileName
             );
 
         } else {
@@ -622,15 +627,6 @@ public class ImageService {
                     maskPath
             );
 
-            if (image.getProcessedFileName() != null) {
-
-                Files.deleteIfExists(
-                        processedDir.resolve(
-                                image.getProcessedFileName()
-                        )
-                );
-            }
-
             String processedFileName =
                     UUID.randomUUID() + ".png";
 
@@ -649,9 +645,16 @@ public class ImageService {
 
             image.setProcessedFileName(processedFileName);
 
-            return ImageDto.from(
+            ImageDto dto = ImageDto.from(
                     imageRepository.save(image)
             );
+
+            deleteOldProcessedFile(
+                    processedDir,
+                    oldProcessedFileName
+            );
+
+            return dto;
 
         } catch (IOException e) {
 
@@ -791,6 +794,23 @@ public class ImageService {
 
         } catch (IOException e) {
             throw new IllegalArgumentException("Could not prepare protection mask");
+        }
+    }
+
+    private void deleteOldProcessedFile(
+            Path processedDir,
+            String oldProcessedFileName
+    ) {
+        if (oldProcessedFileName == null) {
+            return;
+        }
+
+        try {
+            Files.deleteIfExists(
+                    processedDir.resolve(oldProcessedFileName)
+            );
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

@@ -2,6 +2,38 @@ import { useState } from "react";
 import { imageApi } from "@/lib/api";
 import { validateSeamCarvingParams } from "../utils/validation";
 
+const CRIMINISI_MAX_MASK_RATIO = 0.08;
+const CRIMINISI_MAX_MASK_PIXELS = 120000;
+
+function getMaskStats(maskCanvas) {
+    const ctx = maskCanvas.getContext("2d");
+    const { width, height } = maskCanvas;
+
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
+
+    let maskPixels = 0;
+
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+
+        if (r > 20 || g > 20 || b > 20) {
+            maskPixels += 1;
+        }
+    }
+
+    const totalPixels = width * height;
+    const ratio = totalPixels > 0 ? maskPixels / totalPixels : 0;
+
+    return {
+        maskPixels,
+        totalPixels,
+        ratio,
+    };
+}
+
 export function useOpenCvTools({ imageId, imageDimensions, onSuccess, onError }) {
     const [processingTool, setProcessingTool] = useState(false);
 
@@ -82,6 +114,28 @@ export function useOpenCvTools({ imageId, imageDimensions, onSuccess, onError })
 
         if (!maskCanvas) {
             onError("Draw a mask over the area you want to remove.");
+            setProcessingTool(false);
+            return;
+        }
+
+        const maskStats = getMaskStats(maskCanvas);
+
+        if (maskStats.maskPixels === 0) {
+            onError("Draw a mask over the area you want to remove.");
+            setProcessingTool(false);
+            return;
+        }
+
+        if (
+            maskStats.ratio > CRIMINISI_MAX_MASK_RATIO ||
+            maskStats.maskPixels > CRIMINISI_MAX_MASK_PIXELS
+        ) {
+            const selectedPercent = Math.round(maskStats.ratio * 100);
+
+            onError(
+                `The selected area is too large for Criminisi inpainting (${selectedPercent}% of the image). Please select a smaller object or split the removal into multiple smaller steps.`
+            );
+
             setProcessingTool(false);
             return;
         }
