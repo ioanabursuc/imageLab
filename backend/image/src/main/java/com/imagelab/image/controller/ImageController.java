@@ -108,6 +108,7 @@ public class ImageController {
             @RequestParam(required = false) Integer removeCols,
             @RequestParam(required = false) Integer removeRows,
             @RequestParam(required = false) Integer patchRadius,
+            @RequestParam(required = false) String method,
             @RequestParam("mask") MultipartFile mask,
             @AuthenticationPrincipal JwtPrincipal user
     ) {
@@ -118,6 +119,7 @@ public class ImageController {
                         removeCols,
                         removeRows,
                         patchRadius,
+                        method,
                         mask,
                         user.getId()
                 )

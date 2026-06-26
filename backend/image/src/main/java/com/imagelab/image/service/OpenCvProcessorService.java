@@ -126,6 +126,77 @@ public class OpenCvProcessorService {
         runCommand(command, Duration.ofMinutes(5));
     }
 
+    public void runOpenCvInpaint(
+            Path inputPath,
+            Path outputPath,
+            Path maskPath,
+            int radius,
+            String method
+    ) {
+        validateInputFile(inputPath);
+        validateInputFile(maskPath);
+        validateOutputPath(outputPath);
+
+        if (radius < 1) {
+            throw new IllegalArgumentException("radius must be at least 1");
+        }
+
+        String normalizedMethod =
+                method != null && !method.isBlank()
+                        ? method.trim().toLowerCase()
+                        : "telea";
+
+        if (!normalizedMethod.equals("telea") && !normalizedMethod.equals("ns")) {
+            throw new IllegalArgumentException("Unsupported inpaint method: " + method);
+        }
+
+        List<String> command = List.of(
+                processorPath,
+                "inpaint",
+                inputPath.toAbsolutePath().toString(),
+                outputPath.toAbsolutePath().toString(),
+                maskPath.toAbsolutePath().toString(),
+                String.valueOf(radius),
+                normalizedMethod
+        );
+
+        runCommand(command, Duration.ofMinutes(3));
+    }
+
+    public void runDenoise(
+            Path inputPath,
+            Path outputPath
+    ) {
+        validateInputFile(inputPath);
+        validateOutputPath(outputPath);
+
+        List<String> command = List.of(
+                processorPath,
+                "denoise",
+                inputPath.toAbsolutePath().toString(),
+                outputPath.toAbsolutePath().toString()
+        );
+
+        runCommand(command, Duration.ofMinutes(3));
+    }
+
+    public void runDetailEnhance(
+            Path inputPath,
+            Path outputPath
+    ) {
+        validateInputFile(inputPath);
+        validateOutputPath(outputPath);
+
+        List<String> command = List.of(
+                processorPath,
+                "detail_enhance",
+                inputPath.toAbsolutePath().toString(),
+                outputPath.toAbsolutePath().toString()
+        );
+
+        runCommand(command, Duration.ofMinutes(3));
+    }
+
     private void runCommand(List<String> command, Duration timeout) {
         try {
             ProcessBuilder processBuilder = new ProcessBuilder(command);

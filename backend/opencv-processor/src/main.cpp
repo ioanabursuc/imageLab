@@ -6,6 +6,7 @@
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/core/utils/logger.hpp>
+#include <opencv2/photo.hpp>
 
 #include <iostream>
 #include <string>
@@ -38,6 +39,19 @@ static void printUsage()
     cout << "4) Poisson editing:" << endl;
     cout << "   ImageProcessor poisson <sourcePath> <destinationPath> <outputPath> <maskPath> <centerX> <centerY> <mode>" << endl;
     cout << "   mode: normal | mixed | mono" << endl;
+    cout << endl;
+
+    cout << "5) OpenCV inpainting:" << endl;
+    cout << "   ImageProcessor inpaint <inputPath> <outputPath> <maskPath> <radius> <method>" << endl;
+    cout << "   method: telea | ns" << endl;
+    cout << endl;
+
+    cout << "6) Denoise:" << endl;
+    cout << "   ImageProcessor denoise <inputPath> <outputPath>" << endl;
+    cout << endl;
+
+    cout << "7) Detail enhance:" << endl;
+    cout << "   ImageProcessor detail_enhance <inputPath> <outputPath>" << endl;
     cout << endl;
 }
 
@@ -287,6 +301,163 @@ static int runPoisson(int argc, char** argv)
     return 0;
 }
 
+static int runOpenCvInpaint(int argc, char** argv)
+{
+    if (argc != 7)
+    {
+        printUsage();
+        return 1;
+    }
+
+    string inputPath = argv[2];
+    string outputPath = argv[3];
+    string maskPath = argv[4];
+    int radius = stoi(argv[5]);
+    string method = argv[6];
+
+    Mat image = imread(inputPath);
+
+    if (image.empty())
+    {
+        cerr << "ERROR: Could not read input image: " << inputPath << endl;
+        return 2;
+    }
+
+    Mat_<uchar> mask = readMask(maskPath, image.size());
+
+    if (mask.empty())
+    {
+        return 3;
+    }
+
+    radius = max(1, radius);
+
+    int inpaintMethod;
+
+    if (method == "telea")
+    {
+        inpaintMethod = INPAINT_TELEA;
+    }
+    else if (method == "ns")
+    {
+        inpaintMethod = INPAINT_NS;
+    }
+    else
+    {
+        cerr << "ERROR: Unknown inpaint method: " << method << endl;
+        cerr << "Allowed methods: telea | ns" << endl;
+        return 4;
+    }
+
+    Mat result;
+    inpaint(image, mask, result, radius, inpaintMethod);
+
+    if (result.empty())
+    {
+        cerr << "ERROR: OpenCV inpaint returned an empty result." << endl;
+        return 5;
+    }
+
+    if (!imwrite(outputPath, result))
+    {
+        cerr << "ERROR: Could not save output image: " << outputPath << endl;
+        return 6;
+    }
+
+    cout << "SUCCESS: OpenCV inpaint completed." << endl;
+    return 0;
+}
+
+static int runDenoise(int argc, char** argv)
+{
+    if (argc != 4)
+    {
+        printUsage();
+        return 1;
+    }
+
+    string inputPath = argv[2];
+    string outputPath = argv[3];
+
+    Mat image = imread(inputPath);
+
+    if (image.empty())
+    {
+        cerr << "ERROR: Could not read input image: " << inputPath << endl;
+        return 2;
+    }
+
+    Mat result;
+
+    fastNlMeansDenoisingColored(
+        image,
+        result,
+        7.0f,
+        7.0f,
+        7,
+        21
+    );
+
+    if (result.empty())
+    {
+        cerr << "ERROR: Denoise returned an empty result." << endl;
+        return 3;
+    }
+
+    if (!imwrite(outputPath, result))
+    {
+        cerr << "ERROR: Could not save output image: " << outputPath << endl;
+        return 4;
+    }
+
+    cout << "SUCCESS: Denoise completed." << endl;
+    return 0;
+}
+
+static int runDetailEnhance(int argc, char** argv)
+{
+    if (argc != 4)
+    {
+        printUsage();
+        return 1;
+    }
+
+    string inputPath = argv[2];
+    string outputPath = argv[3];
+
+    Mat image = imread(inputPath);
+
+    if (image.empty())
+    {
+        cerr << "ERROR: Could not read input image: " << inputPath << endl;
+        return 2;
+    }
+
+    Mat result;
+
+    detailEnhance(
+        image,
+        result,
+        10.0f,
+        0.15f
+    );
+
+    if (result.empty())
+    {
+        cerr << "ERROR: Detail enhance returned an empty result." << endl;
+        return 3;
+    }
+
+    if (!imwrite(outputPath, result))
+    {
+        cerr << "ERROR: Could not save output image: " << outputPath << endl;
+        return 4;
+    }
+
+    cout << "SUCCESS: Detail enhance completed." << endl;
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_FATAL);
@@ -319,6 +490,21 @@ int main(int argc, char** argv)
         if (algorithm == "poisson")
         {
             return runPoisson(argc, argv);
+        }
+
+        if (algorithm == "inpaint")
+        {
+            return runOpenCvInpaint(argc, argv);
+        }
+
+        if (algorithm == "denoise")
+        {
+            return runDenoise(argc, argv);
+        }
+
+        if (algorithm == "detail_enhance")
+        {
+            return runDetailEnhance(argc, argv);
         }
 
         cerr << "ERROR: Unknown algorithm: " << algorithm << endl;

@@ -26,6 +26,7 @@ export function EditorCanvas({
     const canDrawMask =
         selectedTool === "seam_protect" ||
         selectedTool === "criminisi" ||
+        selectedTool === "inpaint" ||
         (selectedTool === "poisson" && poissonStage === "mask");
 
     const isPoissonPlacement =
@@ -93,50 +94,52 @@ export function EditorCanvas({
                             </div>
                         )}
 
-                        <div
-                            className={
-                                isPoissonPlacement
-                                    ? "relative cursor-crosshair"
-                                    : "relative"
-                            }
-                            onClick={handleCanvasClick}
-                        >
-                            <img
-                                ref={imgRef}
-                                src={previewUrl}
-                                alt="Editing preview"
-                                style={showBefore ? undefined : imageStyle}
-                                className="max-h-[520px] w-full rounded-md object-contain"
-                                crossOrigin="anonymous"
-                                onLoad={onImageLoad}
-                            />
-
-                            {canDrawMask && !showBefore && (
-                                <canvas
-                                    ref={overlayCanvasRef}
-                                    className="absolute left-0 top-0 z-20 h-full w-full cursor-crosshair rounded-md"
-                                    onMouseDown={onPointerDown}
-                                    onMouseMove={onPointerMove}
-                                    onMouseUp={onPointerUp}
-                                    onMouseLeave={onPointerUp}
-                                    onTouchStart={onPointerDown}
-                                    onTouchMove={onPointerMove}
-                                    onTouchEnd={onPointerUp}
+                        <div className="flex w-full justify-center">
+                            <div
+                                className={
+                                    isPoissonPlacement
+                                        ? "relative inline-block max-w-full cursor-crosshair"
+                                        : "relative inline-block max-w-full"
+                                }
+                                onClick={handleCanvasClick}
+                            >
+                                <img
+                                    ref={imgRef}
+                                    src={previewUrl}
+                                    alt="Editing preview"
+                                    style={showBefore ? undefined : imageStyle}
+                                    className="block max-h-[520px] max-w-full rounded-md"
+                                    crossOrigin="anonymous"
+                                    onLoad={onImageLoad}
                                 />
-                            )}
 
-                            {isPoissonPlacement &&
-                                poissonPreviewUrl &&
-                                poissonPreviewStyle && (
-                                    <img
-                                        src={poissonPreviewUrl}
-                                        alt="Poisson object preview"
-                                        className="pointer-events-none absolute z-20 max-w-none opacity-80 drop-shadow-xl"
-                                        style={poissonPreviewStyle}
+                                {canDrawMask && !showBefore && (
+                                    <canvas
+                                        ref={overlayCanvasRef}
+                                        className="absolute left-0 top-0 z-20 cursor-crosshair rounded-md"
+                                        onMouseDown={onPointerDown}
+                                        onMouseMove={onPointerMove}
+                                        onMouseUp={onPointerUp}
+                                        onMouseLeave={onPointerUp}
+                                        onTouchStart={onPointerDown}
+                                        onTouchMove={onPointerMove}
+                                        onTouchEnd={onPointerUp}
                                     />
                                 )}
 
-                            <canvas ref={maskCanvasRef} className="hidden"/>
+                                {isPoissonPlacement &&
+                                    poissonPreviewUrl &&
+                                    poissonPreviewStyle && (
+                                        <img
+                                            src={poissonPreviewUrl}
+                                            alt="Poisson object preview"
+                                            className="pointer-events-none absolute z-20 max-w-none opacity-80 drop-shadow-xl"
+                                            style={poissonPreviewStyle}
+                                        />
+                                    )}
+
+                                <canvas ref={maskCanvasRef} className="hidden"/>
+                            </div>
                         </div>
 
                         {canCompare && selectedTool !== "poisson" && (

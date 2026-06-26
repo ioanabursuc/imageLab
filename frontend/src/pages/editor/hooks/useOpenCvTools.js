@@ -211,11 +211,96 @@ export function useOpenCvTools({ imageId, imageDimensions, onSuccess, onError })
         }
     }
 
+    async function applyFastInpaint(maskCanvas, method = "telea", radius = 3) {
+        setProcessingTool(true);
+
+        if (!maskCanvas) {
+            onError("Draw a mask over the area you want to remove.");
+            setProcessingTool(false);
+            return;
+        }
+
+        const maskStats = getMaskStats(maskCanvas);
+
+        if (maskStats.maskPixels === 0) {
+            onError("Draw a mask over the area you want to remove.");
+            setProcessingTool(false);
+            return;
+        }
+
+        try {
+            maskCanvas.toBlob(async (blob) => {
+                try {
+                    const formData = new FormData();
+                    formData.append("mask", blob, "inpaint-mask.png");
+
+                    const updated = await imageApi.processOpenCvWithMask(
+                        imageId,
+                        {
+                            algorithm: "inpaint",
+                            patchRadius: radius,
+                            method,
+                        },
+                        formData
+                    );
+
+                    await onSuccess(updated);
+                } catch (err) {
+                    console.error(err);
+                    onError(err?.data?.error || "OpenCV inpaint failed.");
+                } finally {
+                    setProcessingTool(false);
+                }
+            }, "image/png");
+        } catch (err) {
+            console.error(err);
+            onError("Could not export mask.");
+            setProcessingTool(false);
+        }
+    }
+
+    async function applyDenoise() {
+        setProcessingTool(true);
+
+        try {
+            const updated = await imageApi.processOpenCv(imageId, {
+                algorithm: "denoise",
+            });
+
+            await onSuccess(updated);
+        } catch (err) {
+            console.error(err);
+            onError(err?.data?.error || "Denoise failed.");
+        } finally {
+            setProcessingTool(false);
+        }
+    }
+
+    async function applyDetailEnhance() {
+        setProcessingTool(true);
+
+        try {
+            const updated = await imageApi.processOpenCv(imageId, {
+                algorithm: "detail_enhance",
+            });
+
+            await onSuccess(updated);
+        } catch (err) {
+            console.error(err);
+            onError(err?.data?.error || "Detail enhance failed.");
+        } finally {
+            setProcessingTool(false);
+        }
+    }
+
     return {
         processingTool,
         applySeamCarving,
         applyProtectedSeamCarving,
         applyCriminisi,
         applyPoisson,
+        applyFastInpaint,
+        applyDenoise,
+        applyDetailEnhance,
     };
 }

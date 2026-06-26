@@ -15,6 +15,7 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
         return (
             selectedTool === "seam_protect" ||
             selectedTool === "criminisi" ||
+            selectedTool === "inpaint" ||
             selectedTool === "poisson"
         );
     }
@@ -26,19 +27,29 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
 
         if (!img || !maskCanvas || !overlayCanvas) return;
 
-        maskCanvas.width = img.naturalWidth;
-        maskCanvas.height = img.naturalHeight;
+        const naturalWidth = img.naturalWidth;
+        const naturalHeight = img.naturalHeight;
+
+        if (!naturalWidth || !naturalHeight) return;
+
+        const rect = img.getBoundingClientRect();
+        const displayWidth = Math.round(rect.width);
+        const displayHeight = Math.round(rect.height);
+
+        overlayCanvas.width = displayWidth;
+        overlayCanvas.height = displayHeight;
+        overlayCanvas.style.width = `${displayWidth}px`;
+        overlayCanvas.style.height = `${displayHeight}px`;
+
+        const overlayCtx = overlayCanvas.getContext("2d");
+        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+        maskCanvas.width = naturalWidth;
+        maskCanvas.height = naturalHeight;
 
         const maskCtx = maskCanvas.getContext("2d");
         maskCtx.fillStyle = "black";
         maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-
-        const rect = img.getBoundingClientRect();
-        overlayCanvas.width = rect.width;
-        overlayCanvas.height = rect.height;
-
-        const overlayCtx = overlayCanvas.getContext("2d");
-        overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
         contourPointsRef.current = [];
         isContourClosedRef.current = false;
@@ -67,20 +78,40 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
     }
 
     function getPointerPosition(event) {
+        const img = imgRef.current;
         const overlayCanvas = overlayCanvasRef.current;
-        if (!overlayCanvas) return null;
+
+        if (!img || !overlayCanvas) return null;
 
         const rect = overlayCanvas.getBoundingClientRect();
-        const clientX = event.clientX ?? event.touches?.[0]?.clientX;
-        const clientY = event.clientY ?? event.touches?.[0]?.clientY;
+        const touch = event.touches?.[0] ?? event.changedTouches?.[0];
+
+        const clientX = event.clientX ?? touch?.clientX;
+        const clientY = event.clientY ?? touch?.clientY;
 
         if (clientX == null || clientY == null) return null;
 
+        const displayX = clientX - rect.left;
+        const displayY = clientY - rect.top;
+
+        if (
+            displayX < 0 ||
+            displayY < 0 ||
+            displayX > rect.width ||
+            displayY > rect.height
+        ) {
+            return null;
+        }
+
+        const scaleX = img.naturalWidth / rect.width;
+        const scaleY = img.naturalHeight / rect.height;
+
         return {
-            displayX: clientX - rect.left,
-            displayY: clientY - rect.top,
-            displayWidth: rect.width,
-            displayHeight: rect.height,
+            displayX,
+            displayY,
+            realX: displayX * scaleX,
+            realY: displayY * scaleY,
+            realBrush: brushSize * ((scaleX + scaleY) / 2),
         };
     }
 
@@ -110,11 +141,7 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
 
         if (!position || !img || !maskCanvas || !overlayCanvas) return;
 
-        const { displayX, displayY, displayWidth, displayHeight } = position;
-
-        const realX = (displayX / displayWidth) * img.naturalWidth;
-        const realY = (displayY / displayHeight) * img.naturalHeight;
-        const realBrush = (brushSize / displayWidth) * img.naturalWidth;
+        const { displayX, displayY, realX, realY, realBrush } = position;
 
         const maskCtx = maskCanvas.getContext("2d");
         const overlayCtx = overlayCanvas.getContext("2d");
@@ -205,9 +232,9 @@ export function useMaskCanvas({ imgRef, selectedTool }) {
 
         if (!img || !maskCanvas || !overlayCanvas) return;
 
-        const overlayRect = overlayCanvas.getBoundingClientRect();
-        const displayWidth = overlayCanvas.width || overlayRect.width;
-        const realBrush = (brushSize / displayWidth) * img.naturalWidth;
+        const scaleX = maskCanvas.width / overlayCanvas.width;
+        const scaleY = maskCanvas.height / overlayCanvas.height;
+        const realBrush = brushSize * ((scaleX + scaleY) / 2);
 
         const maskCtx = maskCanvas.getContext("2d");
         drawClosingLine(maskCtx, points, {

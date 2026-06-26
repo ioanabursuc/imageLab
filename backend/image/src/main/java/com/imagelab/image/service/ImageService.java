@@ -369,6 +369,18 @@ public class ImageService {
                                         : 0
                         );
 
+                case "denoise" ->
+                        openCvProcessorService.runDenoise(
+                                originalPath,
+                                outputPath
+                        );
+
+                case "detail_enhance" ->
+                        openCvProcessorService.runDetailEnhance(
+                                originalPath,
+                                outputPath
+                        );
+
                 default ->
                         throw new IllegalArgumentException(
                                 "Unsupported OpenCV algorithm: "
@@ -404,6 +416,7 @@ public class ImageService {
             Integer removeCols,
             Integer removeRows,
             Integer patchRadius,
+            String method,
             MultipartFile maskFile,
             Long userId
     ) {
@@ -512,6 +525,20 @@ public class ImageService {
                                         patchRadius != null
                                                 ? patchRadius
                                                 : 5
+                                );
+
+                case "inpaint" ->
+                        openCvProcessorService
+                                .runOpenCvInpaint(
+                                        originalPath,
+                                        outputPath,
+                                        maskPath,
+                                        patchRadius != null
+                                                ? patchRadius
+                                                : 3,
+                                        method != null && !method.isBlank()
+                                                ? method
+                                                : "telea"
                                 );
 
                 default ->

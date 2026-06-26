@@ -1,4 +1,4 @@
-import { Expand, Shield, Trash2, Bot, RotateCcw, Plus } from "lucide-react";
+import { Expand, Shield, Trash2, Bot, RotateCcw, Plus, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SliderControl from "./SliderControl";
@@ -7,6 +7,9 @@ import SeamCarvingTool from "../tools/SeamCarvingTool";
 import ProtectedSeamCarvingTool from "../tools/ProtectedSeamCarvingTool";
 import CriminisiTool from "../tools/CriminisiTool";
 import PoissonTool from "../tools/PoissonTool";
+import OpenCvInpaintTool from "../tools/OpenCvInpaintTool";
+import DenoiseTool from "../tools/DenoiseTool";
+import DetailEnhanceTool from "../tools/DetailEnhanceTool";
 
 export default function EditorSidebar({
                                           activeTab,
@@ -54,6 +57,9 @@ export default function EditorSidebar({
                                           onApplySeam,
                                           onApplyProtected,
                                           onApplyCriminisi,
+                                          onApplyInpaint,
+                                          onApplyDenoise,
+                                          onApplyDetailEnhance,
                                           onClearMask,
                                           onCloseContour,
                                           onFillContour,
@@ -89,6 +95,15 @@ export default function EditorSidebar({
         setSelectedTool(nextTool);
 
         if (nextTool === "criminisi") {
+            onPrepareMask();
+        }
+    }
+
+    function handleSelectInpaintTool() {
+        const nextTool = selectedTool === "inpaint" ? null : "inpaint";
+        setSelectedTool(nextTool);
+
+        if (nextTool === "inpaint") {
             onPrepareMask();
         }
     }
@@ -145,6 +160,39 @@ export default function EditorSidebar({
                     "Draw over a small object or area that you want to remove.",
                     "This method works best on small regions with similar surrounding texture.",
                     "For larger objects, split the removal into several smaller steps.",
+                ],
+            };
+        }
+
+        if (selectedTool === "inpaint") {
+            return {
+                title: "OpenCV Inpaint",
+                items: [
+                    "Draw over the object or area that you want to remove.",
+                    "This method is faster than Criminisi and works well for small or medium regions.",
+                    "Telea is usually a good default; Navier-Stokes can be tested for smoother results.",
+                ],
+            };
+        }
+
+        if (selectedTool === "denoise") {
+            return {
+                title: "Denoise",
+                items: [
+                    "Reduces noise and grain from the current image.",
+                    "Useful for images taken in low light or with visible pixel noise.",
+                    "The result is saved as a processed image.",
+                ],
+            };
+        }
+
+        if (selectedTool === "detail_enhance") {
+            return {
+                title: "Detail Enhance",
+                items: [
+                    "Enhances local image details using OpenCV.",
+                    "Useful when the image looks too soft or flat.",
+                    "The result remains a normal photo, not only an effect preview.",
                 ],
             };
         }
@@ -478,6 +526,71 @@ export default function EditorSidebar({
                                 onClear={onClearMask}
                                 onCloseContour={onCloseContour}
                                 onFillContour={onFillContour}
+                            />
+                        )}
+
+                        <ToolButton
+                            icon={<Trash2 size={18} />}
+                            label="OpenCV Inpaint"
+                            onClick={handleSelectInpaintTool}
+                            disabled={processingTool || !activeBaseUrl}
+                            active={selectedTool === "inpaint"}
+                        />
+
+                        {selectedTool === "inpaint" && (
+                            <OpenCvInpaintTool
+                                brushSize={brushSize}
+                                setBrushSize={setBrushSize}
+                                isEraserActive={isEraserActive}
+                                setIsEraserActive={setIsEraserActive}
+                                processingTool={processingTool}
+                                hasMask={hasMask}
+                                onApply={onApplyInpaint}
+                                onClear={onClearMask}
+                                onCloseContour={onCloseContour}
+                                onFillContour={onFillContour}
+                            />
+                        )}
+
+                        <ToolButton
+                            icon={<Sparkles size={18} />}
+                            label="Denoise"
+                            onClick={() =>
+                                setSelectedTool(
+                                    selectedTool === "denoise" ? null : "denoise"
+                                )
+                            }
+                            disabled={processingTool || !activeBaseUrl}
+                            active={selectedTool === "denoise"}
+                        />
+
+                        {selectedTool === "denoise" && (
+                            <DenoiseTool
+                                processingTool={processingTool}
+                                activeBaseUrl={activeBaseUrl}
+                                onApply={onApplyDenoise}
+                            />
+                        )}
+
+                        <ToolButton
+                            icon={<Wand2 size={18} />}
+                            label="Detail Enhance"
+                            onClick={() =>
+                                setSelectedTool(
+                                    selectedTool === "detail_enhance"
+                                        ? null
+                                        : "detail_enhance"
+                                )
+                            }
+                            disabled={processingTool || !activeBaseUrl}
+                            active={selectedTool === "detail_enhance"}
+                        />
+
+                        {selectedTool === "detail_enhance" && (
+                            <DetailEnhanceTool
+                                processingTool={processingTool}
+                                activeBaseUrl={activeBaseUrl}
+                                onApply={onApplyDetailEnhance}
                             />
                         )}
                     </div>

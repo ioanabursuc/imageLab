@@ -265,6 +265,9 @@ export default function EditorPage() {
         applyProtectedSeamCarving,
         applyCriminisi,
         applyPoisson,
+        applyFastInpaint,
+        applyDenoise,
+        applyDetailEnhance,
     } = useOpenCvTools({
         imageId,
         imageDimensions,
@@ -473,6 +476,7 @@ export default function EditorPage() {
         if (
             selectedTool === "seam_protect" ||
             selectedTool === "criminisi" ||
+            selectedTool === "inpaint" ||
             (selectedTool === "poisson" && poissonState.stage === "mask")
         ) {
             setTimeout(() => prepareMaskCanvas(), 0);
@@ -639,6 +643,12 @@ export default function EditorPage() {
                     onApplyCriminisi={() =>
                         applyCriminisi(maskCanvasRef.current, 5)
                     }
+                    onApplyInpaint={(method) =>
+                        applyFastInpaint(maskCanvasRef.current, method, 3)
+                    }
+                    onApplyDenoise={applyDenoise}
+                    onApplyDetailEnhance={applyDetailEnhance}
+                    onApplyPoisson={handleApplyPoisson}
                     onApplyPoisson={handleApplyPoisson}
                     onClearMask={clearMask}
                     onCloseContour={closeCurrentContour}
