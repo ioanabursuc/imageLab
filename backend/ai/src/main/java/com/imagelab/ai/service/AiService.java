@@ -35,18 +35,18 @@ public class AiService {
     private final RestTemplate restTemplate;
 
     private static final String PROMPT_TEMPLATE =
-            "You are an AI assistant inside an image editing application called ImageLab.\n\n" +
-                    "The following tools are available:\n" +
-                    "1. Seam Carving - useful for resizing an image by removing rows or columns while preserving important content.\n" +
-                    "2. Seam Carving with Protection Mask - useful for resizing while protecting user-marked regions.\n" +
-                    "3. Criminisi Inpainting - useful for removing unwanted objects or areas and filling the missing region using surrounding texture.\n" +
-                    "4. Poisson Editing - useful for seamless cloning, blending, or inserting an object naturally into another image.\n" +
-                    "5. Adjustments - brightness, contrast and saturation.\n\n" +
-                    "Analyze the image and the user request: \"%s\"\n\n" +
-                    "Recommend the most suitable tool from the available tools.\n" +
-                    "Explain briefly why it is suitable.\n" +
-                    "If the user needs to draw a mask, clearly say what region should be marked.\n" +
-                    "Answer in Romanian, in plain text only, concise and helpful.";
+            "You are an AI assistant inside ImageLab, an image editing application.\n\n" +
+                    "Talk naturally with the user and help them decide what to do with their image.\n" +
+                    "Recommend the tool, adjustment, or preset that best matches the user's request and that is available.\n" +
+                    "Available tools: Seam Carving, Seam Carving with Protection Mask, Criminisi Inpainting, OpenCV Inpaint, Poisson Editing, Denoise, Detail Enhance, Histograms.\n" +
+                    "Adjustments and ranges: brightness 0-200, contrast 0-200, saturation 0-200, grayscale 0-100, sepia 0-100, hue 0-360, blur 0-10, invert 0-100.\n" +
+                    "Presets: Bright, Black & White, Vintage, Warm, Cold, High Contrast, plus custom user presets.\n\n" +
+                    "User request: \"%s\"\n\n" +
+                    "When mentioning a tool, adjustment, or preset, include its exact English name from the ImageLab interface.\n" +
+                    "When useful, suggest concrete slider values within the available ranges.\n" +
+                    "Do not invent unavailable features.\n" +
+                    "Do not use Markdown, bold text, asterisks, bullet points, lists, or special formatting.\n" +
+                    "Answer in the same language as the user request, in 1-2 short sentences.";
 
     public String analyze(
             Long imageId,
@@ -182,10 +182,13 @@ public class AiService {
                 )
         );
 
-        Map<String, Object> generationConfig =
-                new HashMap<>();
-        generationConfig.put("temperature", 0.4);
+        Map<String, Object> generationConfig = new HashMap<>();
+        generationConfig.put("temperature", 0.3);
         generationConfig.put("maxOutputTokens", 512);
+
+        Map<String, Object> thinkingConfig = new HashMap<>();
+        thinkingConfig.put("thinkingBudget", 0);
+        generationConfig.put("thinkingConfig", thinkingConfig);
 
         Map<String, Object> body =
                 new HashMap<>();
@@ -205,6 +208,7 @@ public class AiService {
                             response.getBody(),
                             "Empty response from Gemini"
                     );
+            System.out.println(responseBody);
 
             return extractGeminiText(responseBody);
 
@@ -231,12 +235,11 @@ public class AiService {
     ) {
         List<Map<String, Object>> candidates =
                 (List<Map<String, Object>>) responseBody.get("candidates");
-
         if (
                 candidates == null ||
                         candidates.isEmpty()
         ) {
-            return "Nu am putut genera o recomandare pentru această imagine.";
+            return "I could not generate a recommendation for this image.";
         }
 
         Map<String, Object> firstCandidate =
@@ -246,7 +249,7 @@ public class AiService {
                 (Map<String, Object>) firstCandidate.get("content");
 
         if (content == null) {
-            return "Nu am putut interpreta răspunsul de la Gemini.";
+            return "I could not read the AI response.";
         }
 
         List<Map<String, Object>> parts =
@@ -256,17 +259,28 @@ public class AiService {
                 parts == null ||
                         parts.isEmpty()
         ) {
-            return "Gemini nu a returnat un răspuns text.";
+            return "The AI did not return a text response.";
         }
 
-        Object text =
-                parts.get(0).get("text");
+        StringBuilder answer =
+                new StringBuilder();
 
-        if (text == null) {
-            return "Gemini nu a returnat un răspuns text.";
+        for (Map<String, Object> part : parts) {
+            Object text = part.get("text");
+
+            if (text != null) {
+                answer.append(text);
+            }
         }
 
-        return text.toString();
+        String result =
+                answer.toString().trim();
+
+        if (result.isBlank()) {
+            return "The AI did not return a text response.";
+        }
+
+        return result;
     }
 
     private String detectMimeType(byte[] bytes) {

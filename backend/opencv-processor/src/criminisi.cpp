@@ -206,18 +206,23 @@ static Point findBestExemplar(
     const Mat_<Vec3f>& lab,
     const Mat_<uchar>& mask255,
     Point targetCenter,
-    int r)
+    int r,
+    int searchRadius = 180)
 {
     float bestDist = FLT_MAX;
     Point best(-1, -1);
 
-    for (int y = r; y < lab.rows - r; ++y)
+    int minY = max(r, targetCenter.y - searchRadius);
+    int maxY = min(lab.rows - r - 1, targetCenter.y + searchRadius);
+    int minX = max(r, targetCenter.x - searchRadius);
+    int maxX = min(lab.cols - r - 1, targetCenter.x + searchRadius);
+
+    for (int y = minY; y <= maxY; ++y)
     {
-        for (int x = r; x < lab.cols - r; ++x)
+        for (int x = minX; x <= maxX; ++x)
         {
             Point q(x, y);
 
-            // patch-ul candidat trebuie sa fie complet cunoscut
             if (!sourcePatchValid(mask255, q, r))
                 continue;
 
@@ -225,7 +230,6 @@ static Point findBestExemplar(
                 lab, mask255, targetCenter, q, r
             );
 
-            // pastreaza patch-ul cu distanta minima
             if (d < bestDist)
             {
                 bestDist = d;
@@ -258,6 +262,12 @@ Mat_<Vec3b> criminisiInpaint(
     // orice valoare > 1 devine 255, pentru masca binara
     threshold(workMask, workMask, 1, 255, THRESH_BINARY);
 
+    Mat lab8;
+    cvtColor(result, lab8, COLOR_BGR2Lab);
+
+    Mat_<Vec3f> lab;
+    lab8.convertTo(lab, CV_32FC3);
+
     // pixelii cunoscuti au confidence 1, pixelii din gaura au confidence 0
     Mat_<float> confidence(image.size(), 1.0f);
     confidence.setTo(0.0f, workMask > 0);
@@ -284,12 +294,6 @@ Mat_<Vec3b> criminisiInpaint(
 
         Mat_<float> maskFloat;
         workMask.convertTo(maskFloat, CV_32F, 1.0 / 255.0);
-
-        Mat lab8;
-        cvtColor(result, lab8, COLOR_BGR2Lab);
-
-        Mat_<Vec3f> lab;
-        lab8.convertTo(lab, CV_32FC3);
 
         float bestPriority = -1.0f;
         Point bestP(-1, -1);
@@ -325,7 +329,7 @@ Mat_<Vec3b> criminisiInpaint(
             break;
 
         // gaseste cel mai bun patch sursa pentru patch-ul ales
-        Point bestQ = findBestExemplar(lab, workMask, bestP, patchRadius);
+        Point bestQ = findBestExemplar(lab, workMask, bestP, patchRadius,180);
 
         // daca nu exista patch sursa valid, se opreste
         if (bestQ.x < 0)
@@ -347,6 +351,10 @@ Mat_<Vec3b> criminisiInpaint(
                 if (workMask(tp.y, tp.x) != 0)
                 {
                     result(tp.y, tp.x) = result(sp.y, sp.x);
+
+                    // actualizeaza si imaginea Lab pentru pixelul nou completat
+                    lab(tp.y, tp.x) = lab(sp.y, sp.x);
+
                     newlyFilled.push_back(tp);
                 }
             }
